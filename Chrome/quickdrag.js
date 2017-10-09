@@ -47,6 +47,17 @@ function handleDragStart(e) {
 	}
 }
 
+// ドラッグ中
+function handleDragOver(e) {
+	if (e.preventDefault) {
+		e.preventDefault();
+	}
+	// ドラッグ中のアイコンを変える
+	e.dataTransfer.dropEffect = 'move';
+
+	return false;
+}
+
 // ドラッグ終了
 function handleDragEnd(e) {
 	if("" === g_SelectStr) {
@@ -77,5 +88,16 @@ function handleDragEnd(e) {
 	}
 }
 
+// ドロップ
+function handleDrop(e) {
+	// デフォルトイベントを無効化
+	if (e.preventDefault) {
+		e.preventDefault();
+	}
+	return false;
+}
+
 document.addEventListener("dragstart", handleDragStart, false);
+document.addEventListener("dragover", handleDragOver, false);
 document.addEventListener("dragend", handleDragEnd, false);
+document.addEventListener("drop", handleDrop, false);
