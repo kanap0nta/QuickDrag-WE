@@ -1,7 +1,7 @@
 {
 
   "manifest_version": 2,
-  "name": "Quickdrag WE",
+  "name": "QuickDrag for Edge",
   "permissions": ["tabs"],
   "version": "1.1",
   "author": "kanaponta",
