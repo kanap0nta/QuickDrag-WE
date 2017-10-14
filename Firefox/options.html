@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="options.css"/>
+  </head>
+
+  <body>
+
+    <section class="clear-options">
+      <span class="title">検索エンジン:</span>
+      <select id="engine">
+        <option value="google" selected>Google</option> 
+        <option value="bing">Bing</option>
+        <option value="baidu">Baidu</option>
+        <option value="yandex">Yandex</option>
+	<option value="yandex_ru">Yandex RU</option>
+	<option value="yahoo_com">Yahoo</option>
+	<option value="yahoo_japan">Yahoo Japan</option>
+	<option value="naver">Naver</option>
+	<option value="duckduckgo">DuckDuckGo</option>
+	<option value="so">360捜索</option>
+	<option value="ask">Ask</option>
+      </select>
+    </section>
+
+    <section class="clear-options data-types">
+      <div class="title" >QuickDrag 設定:</div>
+      <label>Webアドレスをフォアグラウンドタブで開く<input type="checkbox" checked="true" data-type="is_address_forground"/></label>
+      <label>検索結果をフォアグラウンドタブで開く<input type="checkbox" checked="true" data-type="is_search_forground"/></label>
+      <label>ドラッグ＆ドロップで画像を保存する<input type="checkbox" checked="true" data-type="is_save_image"/></label>
+    </section>
+
+    <input type="button" value="保存" id="save-button"/>
+
+    <script src="options.js"></script>
+  </body>
+
+</html>

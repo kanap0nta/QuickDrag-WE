@@ -4,7 +4,7 @@ browser.runtime.onMessage.addListener(
 function (request, sender, sendResponse) {
 	switch (request.type) {
 		case 'searchURL':
-			searchURL(request.value, sendResponse);
+			searchURL(request, sendResponse);
 			break;
 		default:
 			// console.log("unknown type");
@@ -15,7 +15,7 @@ function (request, sender, sendResponse) {
 );
 
 // タブを開く
-function searchURL(value, callback) {
-	browser.tabs.create({url:value, active: true});
-	callback("searchURL:" + value);
+function searchURL(request, callback) {
+	browser.tabs.create({url:request.value, active: request.isforground});
+	callback("searchURL:" + request.value);
 }
