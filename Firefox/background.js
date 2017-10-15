@@ -1,5 +1,5 @@
 // background.js
-// quickdrag.jsからメッセージを受信
+// quickdrag.js縺九ｉ繝｡繝�繧ｻ繝ｼ繧ｸ繧貞女菫｡
 chrome.runtime.onMessage.addListener(
 function (request, sender, sendResponse) {
 	switch (request.type) {
@@ -14,7 +14,7 @@ function (request, sender, sendResponse) {
 	}
 );
 
-// タブを開く
+// 繧ｿ繝悶ｒ髢九￥
 function searchURL(request, callback) {
 	chrome.tabs.create({url:request.value, active: request.isforground});
 	callback("searchURL:" + request.value);
