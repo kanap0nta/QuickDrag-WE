@@ -1,14 +1,14 @@
 // content_script.js
 
-g_SelectStr = "";	// ŒŸõ•¶š—ñ
-g_IsImage = false;	// ‰æ‘œ‚©‚Ç‚¤‚©‚Ìƒtƒ‰ƒO
-g_IsAddressSearch = false;	// WebƒAƒhƒŒƒXŒŸõ‚©‚Ç‚¤‚©(true:WebƒAƒhƒŒƒXŒŸõAfalse:’ÊíŒŸõ)
-g_settingEngineURL = "http:google.com/search?q=";	// ŒŸõƒGƒ“ƒWƒ“•¶š—ñ
-g_settingIsAddressForground = true;	// WebƒAƒhƒŒƒX‚ğƒtƒHƒAƒOƒ‰ƒEƒ“ƒhƒ^ƒu‚ÅŠJ‚­‚©‚Ç‚¤‚©
-g_settingIsSearchForground = true;	// ŒŸõŒ‹‰Ê‚ğƒtƒHƒAƒOƒ‰ƒEƒ“ƒhƒ^ƒu‚ÅŠJ‚­‚©‚Ç‚¤‚©
-g_settingIsSaveImage = true;	// ƒhƒ‰ƒbƒO•ƒhƒƒbƒv‚Å‰æ‘œ‚ğ•Û‘¶‚·‚é‚©‚Ç‚¤‚©
+g_SelectStr = "";	// æ¤œç´¢æ–‡å­—åˆ—
+g_IsImage = false;	// ç”»åƒã‹ã©ã†ã‹ã®ãƒ•ãƒ©ã‚°
+g_IsAddressSearch = false;	// Webã‚¢ãƒ‰ãƒ¬ã‚¹æ¤œç´¢ã‹ã©ã†ã‹(true:Webã‚¢ãƒ‰ãƒ¬ã‚¹æ¤œç´¢ã€false:é€šå¸¸æ¤œç´¢)
+g_settingEngineURL = "http:google.com/search?q=";	// æ¤œç´¢ã‚¨ãƒ³ã‚¸ãƒ³æ–‡å­—åˆ—
+g_settingIsAddressForground = true;	// Webã‚¢ãƒ‰ãƒ¬ã‚¹ã‚’ãƒ•ã‚©ã‚¢ã‚°ãƒ©ã‚¦ãƒ³ãƒ‰ã‚¿ãƒ–ã§é–‹ãã‹ã©ã†ã‹
+g_settingIsSearchForground = true;	// æ¤œç´¢çµæœã‚’ãƒ•ã‚©ã‚¢ã‚°ãƒ©ã‚¦ãƒ³ãƒ‰ã‚¿ãƒ–ã§é–‹ãã‹ã©ã†ã‹
+g_settingIsSaveImage = true;	// ãƒ‰ãƒ©ãƒƒã‚°ï¼†ãƒ‰ãƒ­ãƒƒãƒ—ã§ç”»åƒã‚’ä¿å­˜ã™ã‚‹ã‹ã©ã†ã‹
 
-// URL”»•Ê
+// URLåˆ¤åˆ¥
 function isURL(str) {
 	var isURI = false;
 	var hasScheme = /^(?:(?:h?tt|hxx)ps?|ftp|chrome|file):\/\//i;
@@ -30,7 +30,7 @@ function isURL(str) {
 	return isURI;
 }
 
-// İ’èƒpƒ‰ƒ[ƒ^XV 
+// è¨­å®šãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿æ›´æ–° 
 function updateParam(storage_data) {
 	if(!('searchEngine' in storage_data))
 	{
@@ -42,7 +42,7 @@ function updateParam(storage_data) {
 	g_settingIsSaveImage = storage_data.checkboxArray.indexOf("is_save_image") >= 0 ? true : false;
 }
 
-// ŒŸõƒGƒ“ƒWƒ“•¶š—ñæ“¾
+// æ¤œç´¢ã‚¨ãƒ³ã‚¸ãƒ³æ–‡å­—åˆ—å–å¾—
 function getEngineURL(selectedEngine) {
 	const url = {
 		google: ()	=>	{ return "http:google.com/search?q=" },
@@ -60,7 +60,7 @@ function getEngineURL(selectedEngine) {
 	return url[selectedEngine].call();
 }
 
-// ƒhƒ‰ƒbƒOŠJn
+// ãƒ‰ãƒ©ãƒƒã‚°é–‹å§‹
 function handleDragStart(e) {
 	g_IsImage = false;
 	g_IsAddressSearch = false;
@@ -84,25 +84,25 @@ function handleDragStart(e) {
 	}
 }
 
-// ƒhƒ‰ƒbƒO’†
+// ãƒ‰ãƒ©ãƒƒã‚°ä¸­
 function handleDragOver(e) {
 	if (e.preventDefault) {
 		e.preventDefault();
 	}
-	// ƒhƒ‰ƒbƒO’†‚ÌƒAƒCƒRƒ“‚ğ•Ï‚¦‚é
+	// ãƒ‰ãƒ©ãƒƒã‚°ä¸­ã®ã‚¢ã‚¤ã‚³ãƒ³ã‚’å¤‰ãˆã‚‹
 	e.dataTransfer.dropEffect = 'move';
 
 	return false;
 }
 
-// ƒhƒ‰ƒbƒOI—¹
+// ãƒ‰ãƒ©ãƒƒã‚°çµ‚äº†
 function handleDragEnd(e) {
 	if("" === g_SelectStr) {
 		return;
 	}
 
 	if(true === g_IsImage) {
-		// ‰æ‘œ‚Ìê‡
+		// ç”»åƒã®å ´åˆ
 		if(false === g_settingIsSaveImage) {
 			return;
 		}
@@ -114,21 +114,21 @@ function handleDragEnd(e) {
 		anchor.click();
 		document.body.removeChild(anchor);
 	} else {
-		// ƒ^ƒu‚ğŠJ‚­ê‡
+		// ã‚¿ãƒ–ã‚’é–‹ãå ´åˆ
 		var isforground = true;
 		if(g_IsAddressSearch) {
 			isforground = g_settingIsAddressForground;
 		} else {
 			isforground = g_settingIsSearchForground;
 		}
-		// background.js‚ÉƒƒbƒZ[ƒW‚ğ‘—M
+		// background.jsã«ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸ã‚’é€ä¿¡
 		chrome.runtime.sendMessage (
 			{
 				type: 'searchURL',
 				value: g_SelectStr,
 				isforground: isforground,
 		    	},
-			// ƒR[ƒ‹ƒoƒbƒNŠÖ”
+			// ã‚³ãƒ¼ãƒ«ãƒãƒƒã‚¯é–¢æ•°
 		    	function (response) {
 			        if (response) {
 					// response
@@ -138,9 +138,9 @@ function handleDragEnd(e) {
 	}
 }
 
-// ƒhƒƒbƒv
+// ãƒ‰ãƒ­ãƒƒãƒ—
 function handleDrop(e) {
-	// ƒfƒtƒHƒ‹ƒgƒCƒxƒ“ƒg‚ğ–³Œø‰»
+	// ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆã‚¤ãƒ™ãƒ³ãƒˆã‚’ç„¡åŠ¹åŒ–
 	if (e.preventDefault) {
 		e.preventDefault();
 	}

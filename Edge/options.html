@@ -8,8 +8,10 @@
 
   <body>
 
-    <section class="clear-options">
-      <span class="title">検索エンジン:</span>
+   <div id = "setting-title" class="title" ></div>
+
+    <section>
+      <span id = "engine-title" class="label"></span>
       <select id="engine">
         <option value="google" selected>Google</option> 
         <option value="bing">Bing</option>
@@ -25,15 +27,15 @@
       </select>
     </section>
 
-    <section class="clear-options data-types">
-      <div class="title" >QuickDrag 設定:</div>
-      <label>Webアドレスをフォアグラウンドタブで開く<input type="checkbox" checked="true" data-type="is_address_forground"/></label>
-      <label>検索結果をフォアグラウンドタブで開く<input type="checkbox" checked="true" data-type="is_search_forground"/></label>
-      <label>ドラッグ＆ドロップで画像を保存する<input type="checkbox" checked="true" data-type="is_save_image"/></label>
+    <section class="data-types">
+      <label><input type="checkbox" checked="true" data-type="is_address_forground"/><span id="is-address-forground"></span></label>
+      <label><input type="checkbox" checked="true" data-type="is_search_forground"/><span id="is-search-forground"></span></label>
+      <label><input type="checkbox" checked="true" data-type="is_save_image"/><span id="is-save-image"></span></label>
     </section>
 
-    <input type="button" value="保存" id="save-button"/>
+    <input type="button" value="" id="save-button"/>
 
+    <script src="language.js"></script>
     <script src="options.js"></script>
   </body>
 

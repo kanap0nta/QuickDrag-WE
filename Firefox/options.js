@@ -1,5 +1,5 @@
 // opeionts.js
-// •Û‘¶Wrapper
+// ä¿å­˜Wrapper
 function saveStrage(searchEngine , checkboxArray) {
 	browser.storage.local.set({
 		'searchEngine' : searchEngine,
@@ -7,7 +7,7 @@ function saveStrage(searchEngine , checkboxArray) {
 	});
 }
 
-// ƒf[ƒ^•Û‘¶
+// ãƒ‡ãƒ¼ã‚¿ä¿å­˜
 function storeSettings() {
 
 	function getEngine() {
@@ -29,16 +29,16 @@ function storeSettings() {
 	const searchEngine = getEngine();
 	const checkboxArray = getTypes();
 
-	saveStrage(searchEngine , checkboxArray);	// ƒf[ƒ^•Û‘¶
+	saveStrage(searchEngine , checkboxArray);	// ãƒ‡ãƒ¼ã‚¿ä¿å­˜
 }
 
-// UIXV
+// UIæ›´æ–°
 function updateUI(restoredSettings) {
 	if("undefined" === typeof document) {
-		// ƒCƒ“ƒXƒg[ƒ‹Aƒf[ƒ^‚ª‚È‚¢‚½‚ßƒfƒtƒHƒ‹ƒg’l‚ğg—p
+		// ã‚¤ãƒ³ã‚¹ãƒˆãƒ¼ãƒ«æ™‚ã€ãƒ‡ãƒ¼ã‚¿ãŒãªã„ãŸã‚ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆå€¤ã‚’ä½¿ç”¨
 		const searchEngine =  "google";
 		const checkboxArray = ["is_address_forground", "is_search_forground", "is_save_image"];
-		saveStrage(searchEngine , checkboxArray);	// ƒf[ƒ^•Û‘¶
+		saveStrage(searchEngine , checkboxArray);	// ãƒ‡ãƒ¼ã‚¿ä¿å­˜
 		return;
 	}
 
