@@ -69,6 +69,13 @@ function handleDragStart(e) {
 	if("[object HTMLImageElement]" === e.srcElement.toString()){
 		g_IsImage = true;
 		g_SelectStr = e.srcElement.currentSrc.toString();
+		for (var i = 0; i < e.path.length; i++) {
+			if('A' === e.path[i].nodeName) {
+				g_IsImage = false;
+				g_SelectStr = e.path[i].href;
+				break;
+			}
+		}
 	} else {
 		if (true === isURL(e.dataTransfer.getData("text/plain"))) {
 			g_IsAddressSearch = true;
