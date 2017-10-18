@@ -67,8 +67,12 @@ function handleDragStart(e) {
 	g_SelectStr = "";
 
 	if("[object HTMLImageElement]" === e.explicitOriginalTarget.toString()){
-		g_IsImage = true;
-		g_SelectStr = e.explicitOriginalTarget.src.toString();
+		if ("undefined" === typeof e.target.href) {
+			g_IsImage = true;
+			g_SelectStr = e.explicitOriginalTarget.src.toString();
+		} else {
+			g_SelectStr = e.target.href;
+		}
 	} else {
 		if (true === isURL(e.dataTransfer.getData("text/plain"))) {
 			g_IsAddressSearch = true;
