@@ -1,7 +1,6 @@
 // language.js
 // 言語設定
 function setLanguage(language) {
-//console.log(language[0]);	// 設定言語取得
 	var lang_set_flag = false;
 	for (var language_tbl in obj) {
 		if(language_tbl === language[0]) {
