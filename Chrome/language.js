@@ -64,6 +64,46 @@ var obj = {
 		is_save_image		:" 使用滑鼠拖放下載圖片",
 		save_button		:"保存"
 	},
+	"de":{
+		setting_title		:"QuickDrag Einstellungen",
+		engine_title		:"Suchmaschine ",
+		is_address_forground	:" Tabs für Webadressen im Vordergrund öffnen",
+		is_search_forground	:" Tabs zur Textsuche im Vordergrund öffnen",
+		is_save_image		:" Drag-and-Drop verwenden, um Bilder herunter zu laden",
+		save_button		:"Sparen"
+	},
+	"ko-kr":{
+		setting_title		:"퀵드래그 설정",
+		engine_title		:"검색 엔진 ",
+		is_address_forground	:" 선택한 웹 주소를 활성화된 탭으로 열기",
+		is_search_forground	:" 선택한 텍스트를 활성화된 탭으로 검색하기",
+		is_save_image		:" 끌어다 놓기로 그림을 다른 이름으로 저장하기",
+		save_button		:"구하다"
+	},
+	"ru-RU":{
+		setting_title		:"Настройки QuickDrag",
+		engine_title		:"Поисковый движок ",
+		is_address_forground	:" Загружать обычные и текстовые ссылки в новой активной вкладке",
+		is_search_forground	:" Загружать поисковые запросы в новой активной вкладке",
+		is_save_image		:" Использовать drag&apos;n&apos;drop для сохранения изображений",
+		save_button		:"Спасти"
+	},
+	"fr":{
+		setting_title		:"Paramètres de QuickDrag",
+		engine_title		:"Moteur de recherche ",
+		is_address_forground	:" Ouvrir les onglets des adresses Web au premier-plan",
+		is_search_forground	:" Ouvrir les onglets des recherches de texte au premier-plan",
+		is_save_image		:" Utiliser le glisser-déposer pour télécharger des images",
+		save_button		:"Sauvegarder"
+	},
+	"it-IT":{
+		setting_title		:"Opzioni di QuickDrag",
+		engine_title		:"Motore di ricerca ",
+		is_address_forground	:" Carica i link testuali in schede in primo piano",
+		is_search_forground	:" Carica i risultati di ricerca in schede in primo piano",
+		is_save_image		:" Trascina le immagini per avviarne il download",
+		save_button		:"Salvare"
+	},
 	"ja":{
 		setting_title		:"QuickDrag 設定",
 		engine_title		:"検索エンジン ",
