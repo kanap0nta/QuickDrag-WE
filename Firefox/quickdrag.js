@@ -71,6 +71,7 @@ function handleDragStart(e) {
 			g_IsImage = true;
 			g_SelectStr = e.explicitOriginalTarget.src.toString();
 		} else {
+			g_IsAddressSearch = true;
 			g_SelectStr = e.target.href;
 		}
 	} else {

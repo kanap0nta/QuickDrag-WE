@@ -72,6 +72,7 @@ function handleDragStart(e) {
 		for (var i = 0; i < e.path.length; i++) {
 			if('A' === e.path[i].nodeName) {
 				g_IsImage = false;
+				g_IsAddressSearch = true;
 				g_SelectStr = e.path[i].href;
 				break;
 			}
