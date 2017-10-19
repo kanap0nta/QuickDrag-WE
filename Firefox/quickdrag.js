@@ -52,7 +52,7 @@ function getEngineURL(selectedEngine) {
 		yandex_ru: ()	=>	{ return "https://yandex.ru/search/?text=" },
 		yahoo_com: ()	=>	{ return "https://search.yahoo.com/search?p=" },
 		yahoo_japan: ()	=>	{ return "https://search.yahoo.co.jp/search?p=" },
-		naver: ()	=>	{ return "https://m.search.naver.com/search.naver?query=" },
+		naver: ()	=>	{ return "https://search.naver.com/search.naver?where=nexearch&sm=top_hty&fbm=1&ie=utf8&query=" },
 		duckduckgo: ()	=>	{ return "https://duckduckgo.com/?q=" },
 		so: ()		=>	{ return "https://www.so.com/s?q=" },
 		ask: ()		=>	{ return "https://www.ask.com/web?q=" },
