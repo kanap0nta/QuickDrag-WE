@@ -78,7 +78,7 @@ var obj = {
 		is_address_forground	:" 선택한 웹 주소를 활성화된 탭으로 열기",
 		is_search_forground	:" 선택한 텍스트를 활성화된 탭으로 검색하기",
 		is_save_image		:" 끌어다 놓기로 그림을 다른 이름으로 저장하기",
-		save_button		:"구하다"
+		save_button		:"저장"
 	},
 	"ru-RU":{
 		setting_title		:"Настройки QuickDrag",
@@ -103,6 +103,94 @@ var obj = {
 		is_search_forground	:" Carica i risultati di ricerca in schede in primo piano",
 		is_save_image		:" Trascina le immagini per avviarne il download",
 		save_button		:"Salvare"
+	},
+	"cs":{
+		setting_title		:"QuickDrag Nastavení",
+		engine_title		:"Vyhledávač ",
+		is_address_forground	:" Otevřít webovou stránku do panelu a do popředí",
+		is_search_forground	:" Otevřít hledaný text do nového panelu do popředí",
+		is_save_image		:" Použít drag-and-drop ke stažení obrázků",
+		save_button		:"Uložit"
+	},
+	"da":{
+		setting_title		:"QuickDrag Indstillinger",
+		engine_title		:"Søgemaskine ",
+		is_address_forground	:" Åben faner for web addresser i forgrunden",
+		is_search_forground	:" Åben faner for tekst søgninger i forgrunden",
+		is_save_image		:" Brug træk-og-slip til at downloade billeder",
+		save_button		:"Gemme"
+	},
+	"nl":{
+		setting_title		:"QuickDrag-instellingen",
+		engine_title		:"Zoekmachine ",
+		is_address_forground	:" Tabbladen voor internetadressen in de voorgrond openen",
+		is_search_forground	:" Tabbladen voor zoekopdrachten in de voorgrond openen",
+		is_save_image		:" Drag-and-drop gebruiken voor het downloaden van afbeeldingen",
+		save_button		:"Save"
+	},
+	"nl":{
+		setting_title		:"QuickDrag-instellingen",
+		engine_title		:"Zoekmachine ",
+		is_address_forground	:" Tabbladen voor internetadressen in de voorgrond openen",
+		is_search_forground	:" Tabbladen voor zoekopdrachten in de voorgrond openen",
+		is_save_image		:" Drag-and-drop gebruiken voor het downloaden van afbeeldingen",
+		save_button		:"Save"
+	},
+	"pl":{
+		setting_title		:"QuickDrag - ustawienia",
+		engine_title		:"Wyszukiwarka ",
+		is_address_forground	:" Otwieraj adresy URL w nowej karcie w tle",
+		is_search_forground	:" Otwieraj wyniki wyszukiwania w nowej karcie w tle",
+		is_save_image		:" Użyj funkcji „przeciągnij i upuść” do pobierania obrazków",
+		save_button		:"Zapisz"
+	},
+	"pt-BR":{
+		setting_title		:"Configurações QuickDrag",
+		engine_title		:"Mecanismo de busca ",
+		is_address_forground	:" Abrir abas para endereço web no primeiro plano",
+		is_search_forground	:" Abrir abas para pesquisa de texto no primeiro plano",
+		is_save_image		:" Usar arrastar-e-soltar para download de imagens",
+		save_button		:"Salvar"
+	},
+	"sr":{
+		setting_title		:"Подешавања БрзогПревлачења",
+		engine_title		:"Претраживач ",
+		is_address_forground	:" Отвори језичке за адресе у позадини",
+		is_search_forground	:" Отвори језичке за претраге текста у позадини",
+		is_save_image		:" Користи „превлачење-и-спуштање” за чување слика",
+		save_button		:"Сачувај"
+	},
+	"sv-SE":{
+		setting_title		:"Inställningar för QuickDrag",
+		engine_title		:"Sökmotor ",
+		is_address_forground	:" Öppna flikar för webbadresser i förgrunden",
+		is_search_forground	:" Öppna flikar för textsökningar i förgrunden",
+		is_save_image		:" Använd dra-och-släpp för att ladda ner bilder",
+		save_button		:"Spara"
+	},
+	"tr-TR":{
+		setting_title		:"QuickDrag Ayarları",
+		engine_title		:"Arama motoru ",
+		is_address_forground	:" Web adresleri için sekmeleri önplanda aç",
+		is_search_forground	:" Metin aramaları için sekmeleri önplanda aç",
+		is_save_image		:" Resimleri indirmek için sürükle-bırak kullan",
+		save_button		:"Kayıt etmek"
+	},
+	"uk":{
+		setting_title		:"Налаштування QuickDrag",
+		engine_title		:"Пошукова система ",
+		is_address_forground	:" Відкривати посилання у новій активній вкладці",
+		is_search_forground	:" Відкривати пошукові запити у новій активній вкладці",
+		is_save_image		:" Дозволити перетягування зображень для їх завантаження",
+		save_button		:"Зберегти"
+	},
+	"vi-vn":{
+		setting_title		:"Thiết Lập QuickDrag",
+		engine_title		:"Công cụ tìm kiếm ",
+		is_address_forground	:" Mở địa chỉ web trong thẻ tiền cảnh",
+		is_search_forground	:" Mở kết quả tìm kiếm văn bản trong thẻ tiền cảnh",
+		is_save_image		:" Sử dụng kéo và thả để tải xuống hình ảnh",
+		save_button		:"Lưu lại"
 	},
 	"ja":{
 		setting_title		:"QuickDrag 設定",
