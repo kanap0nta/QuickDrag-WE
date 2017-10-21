@@ -14,16 +14,11 @@ function isURL(str) {
 	var hasScheme = /^(?:(?:h?tt|hxx)ps?|ftp|chrome|file):\/\//i;
 	var hasIP = /(?:^|[\/@])(?:\d{1,3}\.){3}\d{1,3}(?:[:\/\?]|$)/;
 	var hasDomain = new RegExp(
-		// starting boundary
-		"(?:^|[:\\/\\.@])" +
-		// valid second-level name
-		"[a-z0-9](?:[a-z0-9-]*[a-z0-9])" +
-		// valid top-level name: ccTLDs + hard-coded [gs]TLDs
-		"\\.(?:[a-z]{2}|aero|asia|biz|cat|com|coop|edu|gov|info|int|jobs|mil|mobi|museum|name|net|onion|org|pro|tel|travel|xxx)" +
-		// end boundary
-		"(?:[:\\/\\?]|$)",
-		// ignore case
-		"i"
+		"(?:^|[:\\/\\.@])" +				// starting boundary
+		"[a-z0-9](?:[a-z0-9-]*[a-z0-9])" +	// valid second-level name
+		"\\.(?:[a-z]{2,})" +				// valid top-level name: ccTLDs + hard-coded [gs]TLDs
+		"(?:[:\\/\\?]|$)",					// end boundary
+		"i"									// ignore case
 	);
 	isURI = isURI || hasScheme.test(str);
 	isURI = isURI || (!/\s/.test(str) && (hasIP.test(str) || hasDomain.test(str)));
@@ -78,6 +73,11 @@ function handleDragStart(e) {
 			if (/^[\w\.\+\-]+@[\w\.\-]+\.[\w\-]{2,}$/.test(g_SelectStr))
 				g_SelectStr = "mailto:" + g_SelectStr;
 
+			if (!/^[a-z][\da-z+\-]*:/i.test(g_SelectStr))
+				g_SelectStr = g_SelectStr.replace(/^:*[\/\\\s]*/, "http://").replace(/^ht(tp:\/\/ftp\.)/i, "f$1");
+
+			if (!/^(?:https?|ftp):/i.test(g_SelectStr))
+				return;
 		} else {
 			g_SelectStr = g_settingEngineURL + e.dataTransfer.getData("text/plain");
 		}
