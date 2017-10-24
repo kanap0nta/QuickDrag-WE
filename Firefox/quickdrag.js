@@ -55,6 +55,14 @@ function getEngineURL(selectedEngine) {
 	return url[selectedEngine].call();
 }
 
+// デフォルトイベントを無効化
+function eventInvalid(e) {
+	if (e.preventDefault) {
+		e.preventDefault();
+	}
+	return false;
+}
+
 // ドラッグ開始
 function handleDragStart(e) {
 	g_IsImage = false;
@@ -100,8 +108,8 @@ function handleDragOver(e) {
 	return false;
 }
 
-// ドラッグ終了
-function handleDragEnd(e) {
+// ドロップ
+function handleDrop(e) {
 	if("" === g_SelectStr) {
 		return;
 	}
@@ -141,15 +149,8 @@ function handleDragEnd(e) {
 		    	}
 		);
 	}
-}
 
-// ドロップ
-function handleDrop(e) {
-	// デフォルトイベントを無効化
-	if (e.preventDefault) {
-		e.preventDefault();
-	}
-	return false;
+	eventInvalid(e);
 }
 
 
@@ -167,5 +168,5 @@ browser.storage.onChanged.addListener(function(storage_data_obj, area) {
 });
 document.addEventListener("dragstart", handleDragStart, false);
 document.addEventListener("dragover", handleDragOver, false);
-document.addEventListener("dragend", handleDragEnd, false);
+document.addEventListener("dragend", eventInvalid, false);
 document.addEventListener("drop", handleDrop, false);
