@@ -1,18 +1,24 @@
 // opeionts.js
-// •Û‘¶Wrapper
-function saveStrage(searchEngine , checkboxArray) {
+// ä¿å­˜Wrapper
+function saveStrage(searchEngine , tabPosition, checkboxArray) {
 	browser.storage.local.set({
 		'searchEngine' : searchEngine,
+		'tabPosition' 	: tabPosition,
 		'checkboxArray' : checkboxArray
 	});
 }
 
-// ƒf[ƒ^•Û‘¶
+// ãƒ‡ãƒ¼ã‚¿ä¿å­˜
 function storeSettings() {
 
 	function getEngine() {
 		var engine = document.querySelector("#engine");
 		return engine.value;
+	}
+
+	function getTabPosition() {
+		var tab = document.querySelector("#tab");
+		return tab.value;
 	}
 
 	function getTypes() {
@@ -27,18 +33,20 @@ function storeSettings() {
 	}
 
 	const searchEngine = getEngine();
+	const tabPosition = getTabPosition();
 	const checkboxArray = getTypes();
 
-	saveStrage(searchEngine , checkboxArray);	// ƒf[ƒ^•Û‘¶
+	saveStrage(searchEngine , tabPosition, checkboxArray);	// ãƒ‡ãƒ¼ã‚¿ä¿å­˜
 }
 
-// UIXV
+// UIæ›´æ–°
 function updateUI(restoredSettings) {
 	if("undefined" === typeof document) {
-		// ƒCƒ“ƒXƒg[ƒ‹Aƒf[ƒ^‚ª‚È‚¢‚½‚ßƒfƒtƒHƒ‹ƒg’l‚ğg—p
-		const searchEngine =  "google";
+		// ã‚¤ãƒ³ã‚¹ãƒˆãƒ¼ãƒ«æ™‚ã€ãƒ‡ãƒ¼ã‚¿ãŒãªã„ãŸã‚ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆå€¤ã‚’ä½¿ç”¨
+		const searchEngine = "google";
+		const tabPosition = "right";
 		const checkboxArray = ["is_address_forground", "is_search_forground", "is_save_image"];
-		saveStrage(searchEngine , checkboxArray);	// ƒf[ƒ^•Û‘¶
+		saveStrage(searchEngine, tabPosition, checkboxArray);	// ãƒ‡ãƒ¼ã‚¿ä¿å­˜
 		return;
 	}
 
@@ -47,6 +55,13 @@ function updateUI(restoredSettings) {
 		selectList.value = "google";
 	} else {
 		selectList.value = restoredSettings.searchEngine;
+	}
+
+	var selectTabPos = document.querySelector("#tab");
+	if ("undefined" === typeof restoredSettings.tabPosition) {
+		selectTabPos.value = "right";
+	} else {
+		selectTabPos.value = restoredSettings.tabPosition;
 	}
 
 	var checkboxes = document.querySelectorAll(".data-types [type=checkbox]");
@@ -65,7 +80,7 @@ function updateUI(restoredSettings) {
 	}
 }
 
-browser.storage.local.get(["searchEngine", "checkboxArray"], updateUI);
+browser.storage.local.get(["searchEngine", "tabPosition", "checkboxArray"], updateUI);
 
 const saveButton = document.querySelector("#save-button");
 saveButton.addEventListener("click", storeSettings);

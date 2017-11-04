@@ -26,8 +26,26 @@ function getActiveTabIndex(tabs) {
 // タブを開く
 function searchURL(request, callback) {
 	browser.tabs.query( {currentWindow: true}, function (tabs) {
-		var openIndex = getActiveTabIndex(tabs) + 1;
-		browser.tabs.create({url:request.value, active: request.isforground, index: openIndex});
+		switch (request.tab) {
+			case 'right':
+				var openIndex = getActiveTabIndex(tabs) + 1;
+				browser.tabs.create({url:request.value, active: request.isforground, index: openIndex});
+				break;
+			case 'left':
+				var openIndex = getActiveTabIndex(tabs);
+				browser.tabs.create({url:request.value, active: request.isforground, index: openIndex});
+				break;
+			case 'last':
+				browser.tabs.create({url:request.value, active: request.isforground});
+				break;
+			case 'first':
+				var openIndex = 0;
+				browser.tabs.create({url:request.value, active: request.isforground, index: openIndex});
+				break;
+			default:
+				browser.tabs.create({url:request.value, active: request.isforground});
+				break;
+		}
 		callback("searchURL:" + request.value);
 	});
 }

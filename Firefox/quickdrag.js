@@ -4,6 +4,7 @@ g_SelectStr = "";	// 検索文字列
 g_IsImage = false;	// 画像かどうかのフラグ
 g_IsAddressSearch = false;	// Webアドレス検索かどうか(true:Webアドレス検索、false:通常検索)
 g_settingEngineURL = "http:google.com/search?q=";	// 検索エンジン文字列
+g_settingNewTabPosition = "right";	// 新規にタブを開く位置
 g_settingIsAddressForground = true;	// Webアドレスをフォアグラウンドタブで開くかどうか
 g_settingIsSearchForground = true;	// 検索結果をフォアグラウンドタブで開くかどうか
 g_settingIsSaveImage = true;	// ドラッグ＆ドロップで画像を保存するかどうか
@@ -32,6 +33,7 @@ function updateParam(storage_data) {
 		return;
 	}
 	g_settingEngineURL = getEngineURL(storage_data.searchEngine);
+	g_settingNewTabPosition = storage_data.tabPosition;
 	g_settingIsAddressForground = storage_data.checkboxArray.indexOf("is_address_forground") >= 0 ? true : false;
 	g_settingIsSearchForground = storage_data.checkboxArray.indexOf("is_search_forground") >= 0 ? true : false;
 	g_settingIsSaveImage = storage_data.checkboxArray.indexOf("is_save_image") >= 0 ? true : false;
@@ -140,6 +142,7 @@ function handleDrop(e) {
 				type: 'searchURL',
 				value: g_SelectStr,
 				isforground: isforground,
+				tab: g_settingNewTabPosition,
 		    	},
 			// コールバック関数
 		    	function (response) {
@@ -154,13 +157,14 @@ function handleDrop(e) {
 }
 
 
-browser.storage.local.get(["searchEngine", "checkboxArray"], function(storage_data){
+browser.storage.local.get(["searchEngine", "tabPosition", "checkboxArray"], function(storage_data){
 	updateParam(storage_data);
 });
 browser.storage.onChanged.addListener(function(storage_data_obj, area) {
 	if (area == "local") {
 		var storage_data = {
 			searchEngine : storage_data_obj.searchEngine.newValue,
+			tabPosition : storage_data_obj.tabPosition.newValue,
 			checkboxArray : storage_data_obj.checkboxArray.newValue
 		}
 		updateParam(storage_data);
