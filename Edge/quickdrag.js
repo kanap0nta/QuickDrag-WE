@@ -15,11 +15,11 @@ function isURL(str) {
 	var hasScheme = /^(?:(?:h?tt|hxx)ps?|ftp|chrome|file):\/\//i;
 	var hasIP = /(?:^|[\/@])(?:\d{1,3}\.){3}\d{1,3}(?:[:\/\?]|$)/;
 	var hasDomain = new RegExp(
-		"(?:^|[:\\/\\.@])" +				// starting boundary
+		"(?:^|[:\\/\\.@])" +			// starting boundary
 		"[a-z0-9](?:[a-z0-9-]*[a-z0-9])" +	// valid second-level name
-		"\\.(?:[a-z]{2,})" +				// valid top-level name: ccTLDs + hard-coded [gs]TLDs
-		"(?:[:\\/\\?]|$)",					// end boundary
-		"i"									// ignore case
+		"\\.(?:[a-z]{2,13})" +			// valid top-level
+		"(?:[:\\/\\?]|$)",			// end boundary
+		"i"					// ignore case
 	);
 	isURI = isURI || hasScheme.test(str);
 	isURI = isURI || (!/\s/.test(str) && (hasIP.test(str) || hasDomain.test(str)));
