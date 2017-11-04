@@ -4,6 +4,7 @@ g_SelectStr = "";	// 検索文字列
 g_IsImage = false;	// 画像かどうかのフラグ
 g_IsAddressSearch = false;	// Webアドレス検索かどうか(true:Webアドレス検索、false:通常検索)
 g_settingEngineURL = "http:google.com/search?q=";	// 検索エンジン文字列
+g_settingNewTabPosition = "right";	// 新規にタブを開く位置
 g_settingIsAddressForground = true;	// Webアドレスをフォアグラウンドタブで開くかどうか
 g_settingIsSearchForground = true;	// 検索結果をフォアグラウンドタブで開くかどうか
 g_settingIsSaveImage = true;	// ドラッグ＆ドロップで画像を保存するかどうか
@@ -28,6 +29,11 @@ function isURL(str) {
 // 設定パラメータ更新 (検索エンジン)
 function updateParamEngine(storage_data) {
 	g_settingEngineURL = getEngineURL(storage_data);
+}
+
+// 設定パラメータ更新 (新規タブ位置)
+function updateNewTabPosition(storage_data) {
+	g_settingNewTabPosition = storage_data;
 }
 
 // 設定パラメータ更新 (チェックボックス)
@@ -140,6 +146,7 @@ function handleDrop(e) {
 				type: 'searchURL',
 				value: g_SelectStr,
 				isforground: isforground,
+				tab: g_settingNewTabPosition,
 		    	},
 			// コールバック関数
 		    	function (response) {
@@ -154,9 +161,13 @@ function handleDrop(e) {
 }
 
 
-chrome.storage.local.get(["searchEngine", "checkboxArray"], function(storage_data){
+chrome.storage.local.get(["searchEngine", "tabPosition", "checkboxArray"], function(storage_data){
 		if('searchEngine' in storage_data) {
 			updateParamEngine(storage_data.searchEngine);
+		}
+		
+		if('tabPosition' in storage_data) {
+			updateNewTabPosition(storage_data.tabPosition);
 		}
 
 		if('checkboxArray' in storage_data) {
@@ -167,6 +178,10 @@ chrome.storage.onChanged.addListener(function(storage_data_obj, area) {
 	if (area == "local") {
 		if('searchEngine' in storage_data_obj) {
 			updateParamEngine(storage_data_obj.searchEngine.newValue);
+		}
+		
+		if('tabPosition' in storage_data_obj) {
+			updateNewTabPosition(storage_data_obj.tabPosition.newValue);
 		}
 
 		if('checkboxArray' in storage_data_obj) {

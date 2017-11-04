@@ -10,6 +10,8 @@
 
    <div id = "setting-title" class="title" ></div>
 
+    <p></p>
+
     <section>
       <span id = "engine-title" class="label"></span>
       <select id="engine">
@@ -27,11 +29,27 @@
       </select>
     </section>
 
+    <p></p>
+
+    <section>
+      <span id = "tab-title" class="label"></span>
+      <select id="tab">
+        <option value="right" id="tab-open-right" selected></option> 
+        <option value="left" id="tab-open-left"></option>
+        <option value="last" id="tab-open-last"></option>
+        <option value="first" id="tab-open-first"></option>
+      </select>
+    </section>
+
+    <p></p>
+
     <section class="data-types">
       <label><input type="checkbox" checked="true" data-type="is_address_forground"/><span id="is-address-forground"></span></label>
       <label><input type="checkbox" checked="true" data-type="is_search_forground"/><span id="is-search-forground"></span></label>
       <label><input type="checkbox" checked="true" data-type="is_save_image"/><span id="is-save-image"></span></label>
     </section>
+
+    <p></p>
 
     <input type="button" value="" id="save-button"/>
 

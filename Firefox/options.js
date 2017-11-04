@@ -1,8 +1,9 @@
 // opeionts.js
 // 保存Wrapper
-function saveStrage(searchEngine , checkboxArray) {
+function saveStrage(searchEngine , tabPosition, checkboxArray) {
 	browser.storage.local.set({
 		'searchEngine' : searchEngine,
+		'tabPosition' 	: tabPosition,
 		'checkboxArray' : checkboxArray
 	});
 }
@@ -13,6 +14,11 @@ function storeSettings() {
 	function getEngine() {
 		var engine = document.querySelector("#engine");
 		return engine.value;
+	}
+
+	function getTabPosition() {
+		var tab = document.querySelector("#tab");
+		return tab.value;
 	}
 
 	function getTypes() {
@@ -27,18 +33,20 @@ function storeSettings() {
 	}
 
 	const searchEngine = getEngine();
+	const tabPosition = getTabPosition();
 	const checkboxArray = getTypes();
 
-	saveStrage(searchEngine , checkboxArray);	// データ保存
+	saveStrage(searchEngine , tabPosition, checkboxArray);	// データ保存
 }
 
 // UI更新
 function updateUI(restoredSettings) {
 	if("undefined" === typeof document) {
 		// インストール時、データがないためデフォルト値を使用
-		const searchEngine =  "google";
+		const searchEngine = "google";
+		const tabPosition = "right";
 		const checkboxArray = ["is_address_forground", "is_search_forground", "is_save_image"];
-		saveStrage(searchEngine , checkboxArray);	// データ保存
+		saveStrage(searchEngine, tabPosition, checkboxArray);	// データ保存
 		return;
 	}
 
@@ -47,6 +55,13 @@ function updateUI(restoredSettings) {
 		selectList.value = "google";
 	} else {
 		selectList.value = restoredSettings.searchEngine;
+	}
+
+	var selectTabPos = document.querySelector("#tab");
+	if ("undefined" === typeof restoredSettings.tabPosition) {
+		selectTabPos.value = "right";
+	} else {
+		selectTabPos.value = restoredSettings.tabPosition;
 	}
 
 	var checkboxes = document.querySelectorAll(".data-types [type=checkbox]");
@@ -65,7 +80,7 @@ function updateUI(restoredSettings) {
 	}
 }
 
-browser.storage.local.get(["searchEngine", "checkboxArray"], updateUI);
+browser.storage.local.get(["searchEngine", "tabPosition", "checkboxArray"], updateUI);
 
 const saveButton = document.querySelector("#save-button");
 saveButton.addEventListener("click", storeSettings);
