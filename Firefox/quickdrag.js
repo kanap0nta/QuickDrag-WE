@@ -57,6 +57,17 @@ function getEngineURL(selectedEngine) {
 	return url[selectedEngine].call();
 }
 
+// テキストエリアかどうかの判別
+function isTextArea(e){
+	var tag_name = 'INPUT';
+
+	if (!tag_name.includes(e.target.nodeName)) 
+	{
+		return false;
+	}
+	return true;
+}
+
 // デフォルトイベントを無効化
 function eventInvalid(e) {
 	if (e.preventDefault) {
@@ -101,17 +112,24 @@ function handleDragStart(e) {
 
 // ドラッグ中
 function handleDragOver(e) {
+	if(true === isTextArea(e)) {
+		return;
+	}
+
 	if (e.preventDefault) {
 		e.preventDefault();
 	}
+
 	// ドラッグ中のアイコンを変える
 	e.dataTransfer.dropEffect = 'move';
-
-	return false;
 }
 
 // ドロップ
 function handleDrop(e) {
+	if (true === isTextArea(e)) {
+		return;
+	}
+
 	if("" === g_SelectStr) {
 		return;
 	}
