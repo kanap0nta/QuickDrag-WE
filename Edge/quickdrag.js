@@ -48,7 +48,7 @@ function getEngineURL(selectedEngine) {
 	const url = {
 		google: ()	=>	{ return "https://www.google.co.jp/search?source=hp&q=" },
 		bing: ()	=>	{ return "https://www.bing.com/search?q=" },
-		baidu: ()	=>	{ return "http://www.baidu.com/s?ie=utf-8&f=8&rsv_bp=1&rsv_idx=1&tn=baidu&wd=" },
+		baidu: ()	=>	{ return "https://www.baidu.com/s?ie=utf-8&f=8&rsv_bp=1&rsv_idx=1&tn=baidu&wd=" },
 		yandex: ()	=>	{ return "https://www.yandex.com/search/?text=" },
 		yandex_ru: ()	=>	{ return "https://yandex.ru/search/?text=" },
 		yahoo_com: ()	=>	{ return "https://search.yahoo.com/search?p=" },
