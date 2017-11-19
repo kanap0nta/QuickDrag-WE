@@ -3,7 +3,7 @@
 g_SelectStr = "";	// 検索文字列
 g_IsImage = false;	// 画像かどうかのフラグ
 g_IsAddressSearch = false;	// Webアドレス検索かどうか(true:Webアドレス検索、false:通常検索)
-g_settingEngineURL = "http:google.com/search?q=";	// 検索エンジン文字列
+g_settingEngineURL = "https://www.google.co.jp/search?source=hp&q=";	// 検索エンジン文字列
 g_settingNewTabPosition = "right";	// 新規にタブを開く位置
 g_settingIsAddressForground = true;	// Webアドレスをフォアグラウンドタブで開くかどうか
 g_settingIsSearchForground = true;	// 検索結果をフォアグラウンドタブで開くかどうか
@@ -42,9 +42,9 @@ function updateParam(storage_data) {
 // 検索エンジン文字列取得
 function getEngineURL(selectedEngine) {
 	const url = {
-		google: ()	=>	{ return "http:google.com/search?q=" },
+		google: ()	=>	{ return "https://www.google.co.jp/search?source=hp&q=" },
 		bing: ()	=>	{ return "https://www.bing.com/search?q=" },
-		baidu: ()	=>	{ return "http://www.baidu.com/s?ie=utf-8&f=8&rsv_bp=1&rsv_idx=1&tn=baidu&wd=" },
+		baidu: ()	=>	{ return "https://www.baidu.com/s?ie=utf-8&f=8&rsv_bp=1&rsv_idx=1&tn=baidu&wd=" },
 		yandex: ()	=>	{ return "https://www.yandex.com/search/?text=" },
 		yandex_ru: ()	=>	{ return "https://yandex.ru/search/?text=" },
 		yahoo_com: ()	=>	{ return "https://search.yahoo.com/search?p=" },
