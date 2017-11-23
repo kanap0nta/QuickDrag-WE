@@ -61,23 +61,11 @@ function getEngineURL(selectedEngine) {
 	return url[selectedEngine].call();
 }
 
-// テキストエリアかどうかの判別
-function isTextArea(e){
-	var tag_name = 'INPUT';
-
-	if (!tag_name.includes(e.target.nodeName)) 
-	{
-		return false;
-	}
-	return true;
-}
-
 // デフォルトイベントを無効化
 function eventInvalid(e) {
 	if (e.preventDefault) {
 		e.preventDefault();
 	}
-	return false;
 }
 
 // ドラッグ開始
@@ -104,38 +92,29 @@ function handleDragStart(e) {
 			if (!/^(?:https?|ftp):/i.test(g_SelectStr))
 				return;
 		} else {
-			g_SelectStr = g_settingEngineURL + e.dataTransfer.getData("text/plain");
+			g_SelectStr = encodeURIComponent(e.dataTransfer.getData("text/plain"));
+			g_SelectStr = g_settingEngineURL + g_SelectStr;
 		}
 	}
 }
 
-// ドラッグ中
-function handleDragOver(e) {
-	if(true === isTextArea(e)) {
-		return;
-	}
-
-	if (e.preventDefault) {
-		e.preventDefault();
-	}
-
-	// ドラッグ中のアイコンを変える
-	e.dataTransfer.dropEffect = 'move';
-}
-
 // ドロップ
 function handleDrop(e) {
-	if (true === isTextArea(e)) {
-		return;
-	}
-
 	if("" === g_SelectStr) {
 		return;
 	}
 
+	if ("INPUT" === e.target.nodeName.toString()) {
+		g_SelectStr = "";
+		return;
+	}
+
+	eventInvalid(e);
+
 	if(true === g_IsImage) {
 		// 画像の場合
 		if(false === g_settingIsSaveImage) {
+			g_SelectStr = "";
 			return;
 		}
 		var anchor = document.createElement('a');
@@ -151,23 +130,21 @@ function handleDrop(e) {
 			isforground = g_settingIsSearchForground;
 		}
 		// background.jsにメッセージを送信
-		browser.runtime.sendMessage (
-			{
-				type: 'searchURL',
-				value: g_SelectStr,
-				isforground: isforground,
-				tab: g_settingNewTabPosition,
-		    	},
-			// コールバック関数
-		    	function (response) {
-			        if (response) {
-					// response
-			        }
-		    	}
-		);
+		browser.runtime.sendMessage({
+			type: 'searchURL',
+			value: g_SelectStr,
+			isforground: isforground,
+			tab: g_settingNewTabPosition,
+		},
+		// コールバック関数
+		function (response) {
+			if (response) {
+				// response
+			}
+		});
 	}
 
-	eventInvalid(e);
+	g_SelectStr = "";
 }
 
 
@@ -200,6 +177,7 @@ browser.storage.onChanged.addListener(function(storage_data_obj, area) {
 	}
 });
 document.addEventListener("dragstart", handleDragStart, false);
-document.addEventListener("dragover", handleDragOver, false);
+document.addEventListener("dragover", eventInvalid, false);
 document.addEventListener("dragend", eventInvalid, false);
 document.addEventListener("drop", handleDrop, false);
+//document.addEventListener("mouseup" , handleDrop, false); // TODO:全てのエリアが選択可能になった際に有効化

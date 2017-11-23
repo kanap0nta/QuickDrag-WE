@@ -26,17 +26,21 @@ function isURL(str) {
 	return isURI;
 }
 
-// 設定パラメータ更新 
-function updateParam(storage_data) {
-	if(!('searchEngine' in storage_data))
-	{
-		return;
-	}
-	g_settingEngineURL = getEngineURL(storage_data.searchEngine);
-	g_settingNewTabPosition = storage_data.tabPosition;
-	g_settingIsAddressForground = storage_data.checkboxArray.indexOf("is_address_forground") >= 0 ? true : false;
-	g_settingIsSearchForground = storage_data.checkboxArray.indexOf("is_search_forground") >= 0 ? true : false;
-	g_settingIsSaveImage = storage_data.checkboxArray.indexOf("is_save_image") >= 0 ? true : false;
+// 設定パラメータ更新 (検索エンジン)
+function updateParamEngine(storage_data) {
+	g_settingEngineURL = getEngineURL(storage_data);
+}
+
+// 設定パラメータ更新 (新規タブ位置)
+function updateNewTabPosition(storage_data) {
+	g_settingNewTabPosition = storage_data;
+}
+
+// 設定パラメータ更新 (チェックボックス)
+function updateParamcheckboxArray(storage_data) {
+	g_settingIsAddressForground = storage_data.indexOf("is_address_forground") >= 0 ? true : false;
+	g_settingIsSearchForground = storage_data.indexOf("is_search_forground") >= 0 ? true : false;
+	g_settingIsSaveImage = storage_data.indexOf("is_save_image") >= 0 ? true : false;
 }
 
 // 検索エンジン文字列取得
@@ -57,23 +61,11 @@ function getEngineURL(selectedEngine) {
 	return url[selectedEngine].call();
 }
 
-// テキストエリアかどうかの判別
-function isTextArea(e){
-	var tag_name = 'INPUT';
-
-	if (!tag_name.includes(e.target.nodeName)) 
-	{
-		return false;
-	}
-	return true;
-}
-
 // デフォルトイベントを無効化
 function eventInvalid(e) {
 	if (e.preventDefault) {
 		e.preventDefault();
 	}
-	return false;
 }
 
 // ドラッグ開始
@@ -105,38 +97,29 @@ function handleDragStart(e) {
 			if (!/^(?:https?|ftp):/i.test(g_SelectStr))
 				return;
 		} else {
-			g_SelectStr = g_settingEngineURL + e.dataTransfer.getData("text/plain");
+			g_SelectStr = encodeURIComponent(e.dataTransfer.getData("text/plain"));
+			g_SelectStr = g_settingEngineURL + g_SelectStr;
 		}
 	}
 }
 
-// ドラッグ中
-function handleDragOver(e) {
-	if(true === isTextArea(e)) {
-		return;
-	}
-
-	if (e.preventDefault) {
-		e.preventDefault();
-	}
-
-	// ドラッグ中のアイコンを変える
-	e.dataTransfer.dropEffect = 'move';
-}
-
 // ドロップ
 function handleDrop(e) {
-	if (true === isTextArea(e)) {
-		return;
-	}
-
 	if("" === g_SelectStr) {
 		return;
 	}
 
+	if ("INPUT" === e.target.nodeName.toString()) {
+		g_SelectStr = "";
+		return;
+	}
+
+	eventInvalid(e);
+
 	if(true === g_IsImage) {
 		// 画像の場合
 		if(false === g_settingIsSaveImage) {
+			g_SelectStr = "";
 			return;
 		}
 		var anchor = document.createElement('a');
@@ -155,40 +138,54 @@ function handleDrop(e) {
 			isforground = g_settingIsSearchForground;
 		}
 		// background.jsにメッセージを送信
-		chrome.runtime.sendMessage (
-			{
-				type: 'searchURL',
-				value: g_SelectStr,
-				isforground: isforground,
-				tab: g_settingNewTabPosition,
-		    	},
-			// コールバック関数
-		    	function (response) {
-			        if (response) {
-					// response
-			        }
-		    	}
-		);
+		browser.runtime.sendMessage({
+			type: 'searchURL',
+			value: g_SelectStr,
+			isforground: isforground,
+			tab: g_settingNewTabPosition,
+		},
+		// コールバック関数
+		function (response) {
+			if (response) {
+				// response
+			}
+		});
 	}
 
-	eventInvalid(e);
+	g_SelectStr = "";
 }
 
 
 browser.storage.local.get(["searchEngine", "tabPosition", "checkboxArray"], function(storage_data){
-	updateParam(storage_data);
+		if('searchEngine' in storage_data) {
+			updateParamEngine(storage_data.searchEngine);
+		}
+		
+		if('tabPosition' in storage_data) {
+			updateNewTabPosition(storage_data.tabPosition);
+		}
+
+		if('checkboxArray' in storage_data) {
+			updateParamcheckboxArray(storage_data.checkboxArray);
+		}
 });
 browser.storage.onChanged.addListener(function(storage_data_obj, area) {
 	if (area == "local") {
-		var storage_data = {
-			searchEngine : storage_data_obj.searchEngine.newValue,
-			tabPosition : storage_data_obj.tabPosition.newValue,
-			checkboxArray : storage_data_obj.checkboxArray.newValue
+		if('searchEngine' in storage_data_obj) {
+			updateParamEngine(storage_data_obj.searchEngine.newValue);
 		}
-		updateParam(storage_data);
+		
+		if('tabPosition' in storage_data_obj) {
+			updateNewTabPosition(storage_data_obj.tabPosition.newValue);
+		}
+
+		if('checkboxArray' in storage_data_obj) {
+			updateParamcheckboxArray(storage_data_obj.checkboxArray.newValue);
+		}
 	}
 });
 document.addEventListener("dragstart", handleDragStart, false);
-document.addEventListener("dragover", handleDragOver, false);
+document.addEventListener("dragover", eventInvalid, false);
 document.addEventListener("dragend", eventInvalid, false);
 document.addEventListener("drop", handleDrop, false);
+//document.addEventListener("mouseup" , handleDrop, false); // TODO:全てのエリアが選択可能になった際に有効化
