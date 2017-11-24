@@ -95,7 +95,7 @@ function handleDragStart(e) {
 				g_SelectStr = "mailto:" + g_SelectStr;
 
 			if (!/^[a-z][\da-z+\-]*:/i.test(g_SelectStr))
-				g_SelectStr = g_SelectStr.replace(/^:*[\/\\\s]*/, "http://").replace(/^ht(tp:\/\/ftp\.)/i, "f$1");
+				g_SelectStr = g_SelectStr.replace(/^:*[\/\\\s]*/, "https://").replace(/^ht(tp:\/\/ftp\.)/i, "f$1");
 
 			if (!/^(?:https?|ftp):/i.test(g_SelectStr))
 				return;
