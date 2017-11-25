@@ -3,7 +3,7 @@
 g_SelectStr = "";	// 検索文字列
 g_IsImage = false;	// 画像かどうかのフラグ
 g_IsAddressSearch = false;	// Webアドレス検索かどうか(true:Webアドレス検索、false:通常検索)
-g_settingEngineURL = "https://www.google.com/search?source=hp&q=";	// 検索エンジン文字列
+g_settingEngineURL = "https://www.google.com/search?q=";	// 検索エンジン文字列
 g_settingNewTabPosition = "right";	// 新規にタブを開く位置
 g_settingIsAddressForground = true;	// Webアドレスをフォアグラウンドタブで開くかどうか
 g_settingIsSearchForground = true;	// 検索結果をフォアグラウンドタブで開くかどうか
@@ -46,14 +46,14 @@ function updateParamcheckboxArray(storage_data) {
 // 検索エンジン文字列取得
 function getEngineURL(selectedEngine) {
 	const url = {
-		google: ()	=>	{ return "https://www.google.com/search?source=hp&q=" },
+		google: ()	=>	{ return "https://www.google.com/search?q=" },
 		bing: ()	=>	{ return "https://www.bing.com/search?q=" },
-		baidu: ()	=>	{ return "https://www.baidu.com/s?ie=utf-8&f=8&rsv_bp=1&rsv_idx=1&tn=baidu&wd=" },
+		baidu: ()	=>	{ return "https://www.baidu.com/s?ie=utf-8&wd=" },
 		yandex: ()	=>	{ return "https://www.yandex.com/search/?text=" },
 		yandex_ru: ()	=>	{ return "https://yandex.ru/search/?text=" },
 		yahoo_com: ()	=>	{ return "https://search.yahoo.com/search?p=" },
 		yahoo_japan: ()	=>	{ return "https://search.yahoo.co.jp/search?p=" },
-		naver: ()	=>	{ return "https://search.naver.com/search.naver?where=nexearch&sm=top_hty&fbm=1&ie=utf8&query=" },
+		naver: ()	=>	{ return "https://search.naver.com/search.naver?&ie=utf8&query=" },
 		duckduckgo: ()	=>	{ return "https://duckduckgo.com/?q=" },
 		so: ()		=>	{ return "https://www.so.com/s?q=" },
 		ask: ()		=>	{ return "https://www.ask.com/web?q=" },
