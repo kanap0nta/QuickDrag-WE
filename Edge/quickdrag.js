@@ -12,12 +12,12 @@ g_settingIsSaveImage = true;	// ドラッグ＆ドロップで画像を保存す
 // URL判別
 function isURL(str) {
 	var isURI = false;
-	var hasScheme = /^(?:(?:h?tt|hxx)ps?|ftp|chrome|file):\/\//i;
+	var hasScheme = /^(?:(?:( +)?h?tt|hxx)ps?|ftp|chrome|file):\/\//i;
 	var hasIP = /(?:^|[\/@])(?:\d{1,3}\.){3}\d{1,3}(?:[:\/\?]|$)/;
 	var hasDomain = new RegExp(
 		"(?:^|[:\\/\\.@])" +			// starting boundary
 		"[a-z0-9](?:[a-z0-9-]*[a-z0-9])" +	// valid second-level name
-		"\\.(?:[a-z]{2,13})" +			// valid top-level
+		"\\.(?:[a-z]{2}|com|net|org|info|biz|name|pro|aero|coop|museum|jobs|travel|mail|cat|post|asia|mobi|tel|xxx|int|gov|mil|edu|arpa|example|invalid|localhost|test|onion)" +	// valid top-level
 		"(?:[:\\/\\?]|$)",			// end boundary
 		"i"					// ignore case
 	);
@@ -81,6 +81,7 @@ function handleDragStart(e) {
 		if (true === isURL(e.dataTransfer.getData("text/plain"))) {
 			g_IsAddressSearch = true;
 			g_SelectStr = e.dataTransfer.getData("text/plain");
+			g_SelectStr = g_SelectStr.replace(/^ +/i, "");
 			g_SelectStr = g_SelectStr.replace(/^(?:t?t|h[tx]{2,})p(s?:\/\/)/i, "http$1");
 
 			if (/^[\w\.\+\-]+@[\w\.\-]+\.[\w\-]{2,}$/.test(g_SelectStr))
