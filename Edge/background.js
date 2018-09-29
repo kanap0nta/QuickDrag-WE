@@ -4,7 +4,7 @@ browser.runtime.onMessage.addListener(
 function (request, sender, sendResponse) {
 	switch (request.type) {
 		case 'searchURL':
-			searchURL(request, sendResponse);
+			searchURL(request, sender, sendResponse);
 			break;
 		default:
 			// console.log("unknown type");
@@ -24,7 +24,7 @@ function getActiveTabIndex(tabs) {
 }
 
 // タブを開く
-function searchURL(request, callback) {
+function searchURL(request, sender, callback) {
 	browser.tabs.query( {currentWindow: true}, function (tabs) {
 		switch (request.tab) {
 			case 'right':
