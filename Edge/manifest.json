@@ -14,6 +14,7 @@
   },
 
   "browser_action": {
+      "default_icon": {"19": "icons/icon_96.png"},
       "default_title": "QuickDrag options",
       "default_popup": "options.html"
   },
