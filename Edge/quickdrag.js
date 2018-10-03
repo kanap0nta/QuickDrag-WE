@@ -8,6 +8,7 @@ g_settingNewTabPosition = "right";	// 新規にタブを開く位置
 g_settingIsAddressForground = true;	// Webアドレスをフォアグラウンドタブで開くかどうか
 g_settingIsSearchForground = true;	// 検索結果をフォアグラウンドタブで開くかどうか
 g_settingIsSaveImage = true;	// ドラッグ＆ドロップで画像を保存するかどうか
+g_IsFrameFound = false;	// frameのwindowがあるかどうかのフラグ
 
 // URL判別
 function isURL(str) {
@@ -68,6 +69,55 @@ function eventInvalid(e) {
 	}
 }
 
+// メッセージ受信
+function receiveMessage(e){
+	if(null != e.data.message_addon)
+	{
+		if("quickdrag_we_set_str" === e.data.message_addon)
+		{
+			g_SelectStr = e.data.data;
+		}
+		else if("quickdrag_we_set_isframe" === e.data.message_addon)
+		{
+			g_IsFrameFound = e.data.data;
+		}
+	}
+}
+
+// メッセージ送信
+function sendMessage(send_data, is_frame_found) {
+	if(window !== window.parent) {
+	// 現在のウインドウと親ウインドウが異なる場合
+		if(is_frame_found) {
+		// frameタグの場合
+			var frames = window.parent.document.getElementsByTagName('frame');
+		        for (var i = 0; i < frames.length; i++) {
+				frames[i].contentWindow.postMessage({
+					message_addon: "quickdrag_we_set_str",
+					data : send_data
+			    	}, '*');
+			}
+		}
+		else {
+		// frameタグ以外の場合
+			window.parent.postMessage({
+				message_addon: "quickdrag_we_set_str",
+				data : send_data
+		    	}, '*');
+		}
+	}
+	else {
+	// 親ウインドウの場合
+		var iframes = document.getElementsByTagName('iframe');
+	        for (var i = 0; i < iframes.length; i++) {
+			iframes[i].contentWindow.postMessage({
+				message_addon: "quickdrag_we_set_str",
+				data : send_data
+		    	}, '*');
+		}
+	}
+}
+
 // ドラッグ開始
 function handleDragStart(e) {
 	g_IsImage = false;
@@ -97,25 +147,25 @@ function handleDragStart(e) {
 			g_SelectStr = g_settingEngineURL + g_SelectStr;
 		}
 	}
+
+	sendMessage(g_SelectStr, g_IsFrameFound);
 }
 
 // ドロップ
 function handleDrop(e) {
-	if("" === g_SelectStr) {
-		return;
-	}
-
-	if ("INPUT" === e.target.nodeName.toString()) {
-		g_SelectStr = "";
+	if ("INPUT" === e.target.nodeName.toString() || "TEXTAREA" === e.target.nodeName.toString()) {
 		return;
 	}
 
 	eventInvalid(e);
 
+	if("" === g_SelectStr) {
+		return;
+	}
+
 	if(true === g_IsImage) {
 		// 画像の場合
 		if(false === g_settingIsSaveImage) {
-			g_SelectStr = "";
 			return;
 		}
 		var anchor = document.createElement('a');
@@ -144,8 +194,6 @@ function handleDrop(e) {
 			}
 		});
 	}
-
-	g_SelectStr = "";
 }
 
 
@@ -181,4 +229,26 @@ document.addEventListener("dragstart", handleDragStart, false);
 document.addEventListener("dragover", eventInvalid, false);
 document.addEventListener("dragend", eventInvalid, false);
 document.addEventListener("drop", handleDrop, false);
-//document.addEventListener("mouseup" , handleDrop, false); // TODO:全てのエリアが選択可能になった際に有効化
+window.addEventListener('message', receiveMessage, false);
+
+var frames = document.getElementsByTagName('frame');
+for (var i = 0; i < frames.length; i++) {
+	frames[i].onload = function() {
+		frames[i].addEventListener('message', receiveMessage, false);
+	};
+}
+
+window.onload = function() {
+	var frames = document.getElementsByTagName('frame');
+	if(0 >= frames.length) {
+		return;
+	}
+
+	for (var i = 0; i < frames.length; i++) {
+		frames[i].contentWindow.postMessage({
+			message_addon: "quickdrag_we_set_isframe",
+			data : g_IsFrameFound = true
+		}, '*');
+	}
+}
+
