@@ -7,8 +7,9 @@ g_settingEngineURL = "https://www.google.com/search?q=";	// 検索エンジン�
 g_settingNewTabPosition = "right";	// 新規にタブを開く位置
 g_settingIsAddressForground = true;	// Webアドレスをフォアグラウンドタブで開くかどうか
 g_settingIsSearchForground = true;	// 検索結果をフォアグラウンドタブで開くかどうか
-g_settingIsSaveImage = true;	// ドラッグ＆ドロップで画像を保存するかどうか
-g_IsFrameFound = false;	// frameのwindowがあるかどうかのフラグ
+g_settingIsSaveImage = true;		// ドラッグ＆ドロップで画像を保存するかどうか
+g_settingIsPreferSaveImage = true;	// ドリンク付き画像の場合、画像保存を優先するかどうか
+g_IsFrameFound = false;		// frameのwindowがあるかどうかのフラグ
 
 // URL判別
 function isURL(str) {
@@ -42,6 +43,7 @@ function updateParamcheckboxArray(storage_data) {
 	g_settingIsAddressForground = storage_data.indexOf("is_address_forground") >= 0 ? true : false;
 	g_settingIsSearchForground = storage_data.indexOf("is_search_forground") >= 0 ? true : false;
 	g_settingIsSaveImage = storage_data.indexOf("is_save_image") >= 0 ? true : false;
+	g_settingIsPreferSaveImage = storage_data.indexOf("is_prefer_save_image") >= 0 ? true : false;
 }
 
 // 検索エンジン文字列取得
@@ -129,19 +131,25 @@ function handleDragStart(e) {
 		g_SelectStr = e.srcElement.currentSrc.toString();
 	} else {
 		if (true === isURL(e.dataTransfer.getData("text/plain"))) {
-			g_IsAddressSearch = true;
-			g_SelectStr = e.dataTransfer.getData("text/plain");
-			g_SelectStr = g_SelectStr.replace(/^ +/i, "");
-			g_SelectStr = g_SelectStr.replace(/^(?:t?t|h[tx]{2,})p(s?:\/\/)/i, "http$1");
+			if(e.srcElement.getElementsByTagName('img').length > 0 && true === g_settingIsPreferSaveImage) {
+				g_IsImage = true;
+				g_SelectStr = e.srcElement.getElementsByTagName('img')[0].src;
+			}
+			else {
+				g_IsAddressSearch = true;
+				g_SelectStr = e.dataTransfer.getData("text/plain");
+				g_SelectStr = g_SelectStr.replace(/^ +/i, "");
+				g_SelectStr = g_SelectStr.replace(/^(?:t?t|h[tx]{2,})p(s?:\/\/)/i, "http$1");
 
-			if (/^[\w\.\+\-]+@[\w\.\-]+\.[\w\-]{2,}$/.test(g_SelectStr))
-				g_SelectStr = "mailto:" + g_SelectStr;
+				if (/^[\w\.\+\-]+@[\w\.\-]+\.[\w\-]{2,}$/.test(g_SelectStr))
+					g_SelectStr = "mailto:" + g_SelectStr;
 
-			if (!/^[a-z][\da-z+\-]*:/i.test(g_SelectStr))
-				g_SelectStr = g_SelectStr.replace(/^:*[\/\\\s]*/, "http://").replace(/^ht(tp:\/\/ftp\.)/i, "f$1");
+				if (!/^[a-z][\da-z+\-]*:/i.test(g_SelectStr))
+					g_SelectStr = g_SelectStr.replace(/^:*[\/\\\s]*/, "http://").replace(/^ht(tp:\/\/ftp\.)/i, "f$1");
 
-			if (!/^(?:https?|ftp):/i.test(g_SelectStr))
-				return;
+				if (!/^(?:https?|ftp):/i.test(g_SelectStr))
+					return;
+			}
 		} else {
 			g_SelectStr = encodeURIComponent(e.dataTransfer.getData("text/plain"));
 			g_SelectStr = g_settingEngineURL + g_SelectStr;

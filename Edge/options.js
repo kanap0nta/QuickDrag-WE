@@ -45,7 +45,7 @@ function updateUI(restoredSettings) {
 		// インストール時、データがないためデフォルト値を使用
 		const searchEngine = "google";
 		const tabPosition = "right";
-		const checkboxArray = ["is_address_forground", "is_search_forground", "is_save_image"];
+		const checkboxArray = ["is_address_forground", "is_search_forground", "is_save_image", "is_prefer_save_image"];
 		saveStrage(searchEngine, tabPosition, checkboxArray);	// データ保存
 		return;
 	}

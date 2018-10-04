@@ -7,8 +7,9 @@ g_settingEngineURL = "https://www.google.com/search?q=";	// 検索エンジン�
 g_settingNewTabPosition = "right";	// 新規にタブを開く位置
 g_settingIsAddressForground = true;	// Webアドレスをフォアグラウンドタブで開くかどうか
 g_settingIsSearchForground = true;	// 検索結果をフォアグラウンドタブで開くかどうか
-g_settingIsSaveImage = true;	// ドラッグ＆ドロップで画像を保存するかどうか
-g_IsFrameFound = false;	// frameのwindowがあるかどうかのフラグ
+g_settingIsSaveImage = true;		// ドラッグ＆ドロップで画像を保存するかどうか
+g_settingIsPreferSaveImage = true;	// ドリンク付き画像の場合、画像保存を優先するかどうか
+g_IsFrameFound = false;		// frameのwindowがあるかどうかのフラグ
 
 // URL判別
 function isURL(str) {
@@ -42,6 +43,7 @@ function updateParamcheckboxArray(storage_data) {
 	g_settingIsAddressForground = storage_data.indexOf("is_address_forground") >= 0 ? true : false;
 	g_settingIsSearchForground = storage_data.indexOf("is_search_forground") >= 0 ? true : false;
 	g_settingIsSaveImage = storage_data.indexOf("is_save_image") >= 0 ? true : false;
+	g_settingIsPreferSaveImage = storage_data.indexOf("is_prefer_save_image") >= 0 ? true : false;
 }
 
 // 検索エンジン文字列取得
@@ -128,7 +130,7 @@ function handleDragStart(e) {
 		g_IsImage = true;
 		g_SelectStr = e.srcElement.currentSrc.toString();
 		for (var i = 0; i < e.path.length; i++) {
-			if('A' === e.path[i].nodeName) {
+			if('A' === e.path[i].nodeName && false === g_settingIsPreferSaveImage) {
 				g_IsImage = false;
 				g_IsAddressSearch = true;
 				g_SelectStr = e.path[i].href;
