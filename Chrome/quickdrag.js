@@ -258,7 +258,7 @@ for (var i = 0; i < frames.length; i++) {
 	};
 }
 
-window.onload = function() {
+window.addEventListener("load", function() {
 	var frames = document.getElementsByTagName('frame');
 	if(0 >= frames.length) {
 		return;
@@ -270,5 +270,5 @@ window.onload = function() {
 			data : g_IsFrameFound = true
 		}, '*');
 	}
-}
+}, false);
 
