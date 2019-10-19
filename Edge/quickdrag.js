@@ -1,5 +1,3 @@
-// content_script.js
-
 g_SelectStr = "";	// 検索文字列
 g_IsImage = false;	// 画像かどうかのフラグ
 g_IsBase64 = false;	// Base64でエンコードされているか
@@ -10,7 +8,6 @@ g_settingIsAddressForground = true;	// Webアドレスをフォアグラウン�
 g_settingIsSearchForground = true;	// 検索結果をフォアグラウンドタブで開くかどうか
 g_settingIsSaveImage = true;		// ドラッグ＆ドロップで画像を保存するかどうか
 g_settingIsPreferSaveImage = true;	// ドリンク付き画像の場合、画像保存を優先するかどうか
-g_IsFrameFound = false;		// frameのwindowがあるかどうかのフラグ
 
 // URL判別
 function isURL(str) {
@@ -78,44 +75,47 @@ function receiveMessage(e){
 	{
 		if("quickdrag_we_set_str" === e.data.message_addon)
 		{
-			g_SelectStr = e.data.data;
-		}
-		else if("quickdrag_we_set_isframe" === e.data.message_addon)
-		{
-			g_IsFrameFound = e.data.data;
+			g_SelectStr = e.data.SelectStr;
+			g_IsImage = e.data.IsImage;
+			g_IsBase64 = e.data.IsBase64;
+			g_IsAddressSearch = e.data.IsAddressSearch;
 		}
 	}
 }
 
 // メッセージ送信
-function sendMessage(send_data, is_frame_found) {
-	if(window !== window.parent) {
-	// 現在のウインドウと親ウインドウが異なる場合
-		if(is_frame_found) {
-		// frameタグの場合
-			var frames = window.parent.document.getElementsByTagName('frame');
-		        for (var i = 0; i < frames.length; i++) {
-				frames[i].contentWindow.postMessage({
-					message_addon: "quickdrag_we_set_str",
-					data : send_data
-			    	}, '*');
-			}
-		}
-		else {
-		// frameタグ以外の場合
-			window.parent.postMessage({
-				message_addon: "quickdrag_we_set_str",
-				data : send_data
-		    	}, '*');
-		}
+function sendMessage(send_data, is_image, is_base64, is_address_search) {
+	if(window !== window.top) {
+	// ドラッグ先のウインドウがトップウインドウでない場合
+		window.top.postMessage({
+			message_addon: "quickdrag_we_set_str",
+			SelectStr : send_data,
+			IsImage : is_image,
+			IsBase64 : is_base64,
+			IsAddressSearch : is_address_search
+	    	}, '*');
 	}
 	else {
-	// 親ウインドウの場合
+	// トップウインドウの場合
+		var frames = document.getElementsByTagName('frame');
+	        for (var i = 0; i < frames.length; i++) {
+			frames[i].contentWindow.postMessage({
+				message_addon: "quickdrag_we_set_str",
+				SelectStr : send_data,
+				IsImage : is_image,
+				IsBase64 : is_base64,
+				IsAddressSearch : is_address_search
+		    	}, '*');
+		}
+
 		var iframes = document.getElementsByTagName('iframe');
 	        for (var i = 0; i < iframes.length; i++) {
 			iframes[i].contentWindow.postMessage({
 				message_addon: "quickdrag_we_set_str",
-				data : send_data
+				SelectStr : send_data,
+				IsImage : is_image,
+				IsBase64 : is_base64,
+				IsAddressSearch : is_address_search
 		    	}, '*');
 		}
 	}
@@ -166,7 +166,7 @@ function handleDragStart(e) {
 		}
 	}
 
-	sendMessage(g_SelectStr, g_IsFrameFound);
+	sendMessage(g_SelectStr, g_IsImage, g_IsBase64, g_IsAddressSearch);
 }
 
 // Base64データをBlobデータに変換
@@ -268,6 +268,12 @@ document.addEventListener("dragover", eventInvalid, false);
 document.addEventListener("dragend", eventInvalid, false);
 document.addEventListener("drop", handleDrop, false);
 window.addEventListener('message', receiveMessage, false);
+var iframes = document.getElementsByTagName('iframe');
+for (var i = 0; i < iframes.length; i++) {
+	iframes[i].onload = function() {
+		iframes[i].addEventListener('message', receiveMessage, false);
+	};
+}
 
 var frames = document.getElementsByTagName('frame');
 for (var i = 0; i < frames.length; i++) {
@@ -275,18 +281,3 @@ for (var i = 0; i < frames.length; i++) {
 		frames[i].addEventListener('message', receiveMessage, false);
 	};
 }
-
-window.addEventListener("load", function() {
-	var frames = document.getElementsByTagName('frame');
-	if(0 >= frames.length) {
-		return;
-	}
-
-	for (var i = 0; i < frames.length; i++) {
-		frames[i].contentWindow.postMessage({
-			message_addon: "quickdrag_we_set_isframe",
-			data : g_IsFrameFound = true
-		}, '*');
-	}
-}, false);
-
