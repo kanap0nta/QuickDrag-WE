@@ -2,6 +2,7 @@
 
 g_SelectStr = "";	// 検索文字列
 g_IsImage = false;	// 画像かどうかのフラグ
+g_IsBase64 = false;	// Base64でエンコードされているか
 g_IsAddressSearch = false;	// Webアドレス検索かどうか(true:Webアドレス検索、false:通常検索)
 g_settingEngineURL = "https://www.google.com/search?q=";	// 検索エンジン文字列
 g_settingNewTabPosition = "right";	// 新規にタブを開く位置
@@ -123,6 +124,7 @@ function sendMessage(send_data, is_frame_found) {
 // ドラッグ開始
 function handleDragStart(e) {
 	g_IsImage = false;
+	g_IsBase64 = false;
 	g_IsAddressSearch = false;
 	g_SelectStr = "";
 
@@ -135,6 +137,13 @@ function handleDragStart(e) {
 				g_IsAddressSearch = true;
 				g_SelectStr = e.path[i].href;
 				break;
+			}
+		}
+		if(true === g_IsImage)
+		{
+			var hasScheme = /^(?:(?:( +)?h?tt|hxx)ps?|ftp|chrome|file):\/\//i;
+			if(false === hasScheme.test(g_SelectStr)) {
+				g_IsBase64 = true;
 			}
 		}
 	} else {
@@ -188,10 +197,26 @@ function handleDrop(e) {
 		if(false === g_settingIsSaveImage) {
 			return;
 		}
-		var anchor = document.createElement('a');
-		anchor.href = g_SelectStr;
-		anchor.download = '';
-		anchor.click();
+		if(true === g_IsBase64) {
+			var anchor = document.createElement('a');
+			anchor.href = g_SelectStr;
+			anchor.download = '';
+			anchor.click();
+		} else {
+			// background.jsにメッセージを送信
+			chrome.runtime.sendMessage({
+				type: 'downloadImage',
+				value: g_SelectStr,
+				isforground: isforground,
+				tab: g_settingNewTabPosition,
+			},
+			// コールバック関数
+			function (response) {
+				if (response) {
+					// response
+				}
+			});
+		}
 	} else {
 		// タブを開く場合
 		var isforground = true;

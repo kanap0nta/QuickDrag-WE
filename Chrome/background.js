@@ -6,6 +6,9 @@ function (request, sender, sendResponse) {
 		case 'searchURL':
 			searchURL(request, sender, sendResponse);
 			break;
+		case 'downloadImage':
+			downloadImage(request, sender, sendResponse);
+			break;
 		default:
 			// console.log("unknown type");
 			// console.log(request);
@@ -48,4 +51,10 @@ function searchURL(request, sender, callback) {
 		}
 		callback("searchURL:" + request.value);
 	});
+}
+
+// 画像を保存
+function downloadImage(request, sender, callback) {
+	var downloading = chrome.downloads.download({url:request.value, saveAs:true, conflictAction:"overwrite"});
+	callback("downloadImage:" + downloading);
 }
