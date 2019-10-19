@@ -2,6 +2,7 @@
 
 g_SelectStr = "";	// 検索文字列
 g_IsImage = false;	// 画像かどうかのフラグ
+g_IsBase64 = false;	// Base64でエンコードされているか
 g_IsAddressSearch = false;	// Webアドレス検索かどうか(true:Webアドレス検索、false:通常検索)
 g_settingEngineURL = "https://www.google.com/search?q=";	// 検索エンジン文字列
 g_settingNewTabPosition = "right";	// 新規にタブを開く位置
@@ -123,17 +124,26 @@ function sendMessage(send_data, is_frame_found) {
 // ドラッグ開始
 function handleDragStart(e) {
 	g_IsImage = false;
+	g_IsBase64 = false;
 	g_IsAddressSearch = false;
 	g_SelectStr = "";
 
 	if("[object HTMLImageElement]" === e.srcElement.toString()){
 		g_IsImage = true;
 		g_SelectStr = e.srcElement.currentSrc.toString();
+		var hasScheme = /^(?:(?:( +)?h?tt|hxx)ps?|ftp|chrome|file):\/\//i;
+		if(false === hasScheme.test(g_SelectStr)) {
+			g_IsBase64 = true;
+		}
 	} else {
 		if (true === isURL(e.dataTransfer.getData("text/plain"))) {
 			if(e.srcElement.getElementsByTagName('img').length > 0 && true === g_settingIsPreferSaveImage) {
 				g_IsImage = true;
 				g_SelectStr = e.srcElement.getElementsByTagName('img')[0].src;
+				var hasScheme = /^(?:(?:( +)?h?tt|hxx)ps?|ftp|chrome|file):\/\//i;
+				if(false === hasScheme.test(g_SelectStr)) {
+					g_IsBase64 = true;
+				}
 			}
 			else {
 				g_IsAddressSearch = true;
@@ -159,6 +169,20 @@ function handleDragStart(e) {
 	sendMessage(g_SelectStr, g_IsFrameFound);
 }
 
+// Base64データをBlobデータに変換
+function Base64toBlob(base64)
+{
+	var tmp = base64.split(',');
+	var data = atob(tmp[1]);
+	var mime = tmp[0].split(':')[1].split(';')[0];
+	var buf = new Uint8Array(data.length);
+	for (var i = 0; i < data.length; i++) {
+		buf[i] = data.charCodeAt(i);
+	}
+	var blob = new Blob([buf], { type: mime });
+	return blob;
+}
+
 // ドロップ
 function handleDrop(e) {
 	if ("INPUT" === e.target.nodeName.toString() || "TEXTAREA" === e.target.nodeName.toString()) {
@@ -176,10 +200,16 @@ function handleDrop(e) {
 		if(false === g_settingIsSaveImage) {
 			return;
 		}
-		var anchor = document.createElement('a');
-		anchor.href = g_SelectStr;
-		anchor.download = '';
-		anchor.click();
+		if(true === g_IsBase64) {
+			var name = "." + g_SelectStr.toString().slice(g_SelectStr.indexOf('/') + 1, g_SelectStr.indexOf(';'));
+			var blob = Base64toBlob(g_SelectStr);
+			window.navigator.msSaveOrOpenBlob(blob, name);
+		} else {
+			var anchor = document.createElement('a');
+			anchor.href = g_SelectStr;
+			anchor.download = '';
+			anchor.click();
+		}
 	} else {
 		// タブを開く場合
 		var isforground = true;
