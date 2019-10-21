@@ -1,10 +1,10 @@
 // opeionts.js
 // 保存Wrapper
-function saveStrage(searchEngine , tabPosition, checkboxArray) {
+function saveStrage(searchEngine, tabPosition, checkboxArray) {
 	chrome.storage.local.set({
-		'searchEngine' : searchEngine,
-		'tabPosition' 	: tabPosition,
-		'checkboxArray' : checkboxArray
+		'searchEngine': searchEngine,
+		'tabPosition': tabPosition,
+		'checkboxArray': checkboxArray
 	});
 }
 
@@ -36,17 +36,17 @@ function storeSettings() {
 	const tabPosition = getTabPosition();
 	const checkboxArray = getTypes();
 
-	saveStrage(searchEngine , tabPosition, checkboxArray);	// データ保存
+	saveStrage(searchEngine, tabPosition, checkboxArray); // データ保存
 }
 
 // UI更新
 function updateUI(restoredSettings) {
-	if("undefined" === typeof document) {
+	if ("undefined" === typeof document) {
 		// インストール時、データがないためデフォルト値を使用
 		const searchEngine = "google";
 		const tabPosition = "right";
 		const checkboxArray = ["is_address_forground", "is_search_forground", "is_save_image", "is_prefer_save_image"];
-		saveStrage(searchEngine, tabPosition, checkboxArray);	// データ保存
+		saveStrage(searchEngine, tabPosition, checkboxArray); // データ保存
 		return;
 	}
 

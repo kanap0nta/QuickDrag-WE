@@ -1,13 +1,13 @@
-g_SelectStr = "";	// 検索文字列
-g_IsImage = false;	// 画像かどうかのフラグ
-g_IsBase64 = false;	// Base64でエンコードされているか
-g_IsAddressSearch = false;	// Webアドレス検索かどうか(true:Webアドレス検索、false:通常検索)
-g_settingEngineURL = "https://www.google.com/search?q=";	// 検索エンジン文字列
-g_settingNewTabPosition = "right";	// 新規にタブを開く位置
-g_settingIsAddressForground = true;	// Webアドレスをフォアグラウンドタブで開くかどうか
-g_settingIsSearchForground = true;	// 検索結果をフォアグラウンドタブで開くかどうか
-g_settingIsSaveImage = true;		// ドラッグ＆ドロップで画像を保存するかどうか
-g_settingIsPreferSaveImage = true;	// ドリンク付き画像の場合、画像保存を優先するかどうか
+g_SelectStr = ""; // 検索文字列
+g_IsImage = false; // 画像かどうかのフラグ
+g_IsBase64 = false; // Base64でエンコードされているか
+g_IsAddressSearch = false; // Webアドレス検索かどうか(true:Webアドレス検索、false:通常検索)
+g_settingEngineURL = "https://www.google.com/search?q="; // 検索エンジン文字列
+g_settingNewTabPosition = "right"; // 新規にタブを開く位置
+g_settingIsAddressForground = true; // Webアドレスをフォアグラウンドタブで開くかどうか
+g_settingIsSearchForground = true; // 検索結果をフォアグラウンドタブで開くかどうか
+g_settingIsSaveImage = true; // ドラッグ＆ドロップで画像を保存するかどうか
+g_settingIsPreferSaveImage = true; // ドリンク付き画像の場合、画像保存を優先するかどうか
 
 // URL判別
 function isURL(str) {
@@ -15,11 +15,11 @@ function isURL(str) {
 	var hasScheme = /^(?:(?:( +)?h?tt|hxx)ps?|ftp|chrome|file):\/\//i;
 	var hasIP = /(?:^|[\/@])(?:\d{1,3}\.){3}\d{1,3}(?:[:\/\?]|$)/;
 	var hasDomain = new RegExp(
-		"(?:^|[:\\/\\.@])" +			// starting boundary
-		"[a-z0-9](?:[a-z0-9-]*[a-z0-9])" +	// valid second-level name
-		"\\.(?:[a-z]{2}|com|net|org|info|biz|name|pro|aero|coop|museum|jobs|travel|mail|cat|post|asia|mobi|tel|xxx|int|gov|mil|edu|arpa|example|invalid|localhost|test|onion)" +	// valid top-level
-		"(?:[:\\/\\?]|$)",			// end boundary
-		"i"					// ignore case
+		"(?:^|[:\\/\\.@])" + // starting boundary
+		"[a-z0-9](?:[a-z0-9-]*[a-z0-9])" + // valid second-level name
+		"\\.(?:[a-z]{2}|com|net|org|info|biz|name|pro|aero|coop|museum|jobs|travel|mail|cat|post|asia|mobi|tel|xxx|int|gov|mil|edu|arpa|example|invalid|localhost|test|onion)" + // valid top-level
+		"(?:[:\\/\\?]|$)", // end boundary
+		"i" // ignore case
 	);
 	isURI = isURI || hasScheme.test(str);
 	isURI = isURI || (!/\s/.test(str) && (hasIP.test(str) || hasDomain.test(str)));
@@ -70,11 +70,9 @@ function eventInvalid(e) {
 }
 
 // メッセージ受信
-function receiveMessage(e){
-	if(null != e.data.message_addon)
-	{
-		if("quickdrag_we_set_str" === e.data.message_addon)
-		{
+function receiveMessage(e) {
+	if (null != e.data.message_addon) {
+		if ("quickdrag_we_set_str" === e.data.message_addon) {
 			g_SelectStr = e.data.SelectStr;
 			g_IsImage = e.data.IsImage;
 			g_IsBase64 = e.data.IsBase64;
@@ -85,38 +83,37 @@ function receiveMessage(e){
 
 // メッセージ送信
 function sendMessage(send_data, is_image, is_base64, is_address_search) {
-	if(window !== window.top) {
-	// ドラッグ先のウインドウがトップウインドウでない場合
+	if (window !== window.top) {
+		// ドラッグ先のウインドウがトップウインドウでない場合
 		window.top.postMessage({
 			message_addon: "quickdrag_we_set_str",
-			SelectStr : send_data,
-			IsImage : is_image,
-			IsBase64 : is_base64,
-			IsAddressSearch : is_address_search
-	    	}, '*');
-	}
-	else {
-	// トップウインドウの場合
+			SelectStr: send_data,
+			IsImage: is_image,
+			IsBase64: is_base64,
+			IsAddressSearch: is_address_search
+		}, '*');
+	} else {
+		// トップウインドウの場合
 		var frames = document.getElementsByTagName('frame');
-	        for (var i = 0; i < frames.length; i++) {
+		for (var i = 0; i < frames.length; i++) {
 			frames[i].contentWindow.postMessage({
 				message_addon: "quickdrag_we_set_str",
-				SelectStr : send_data,
-				IsImage : is_image,
-				IsBase64 : is_base64,
-				IsAddressSearch : is_address_search
-		    	}, '*');
+				SelectStr: send_data,
+				IsImage: is_image,
+				IsBase64: is_base64,
+				IsAddressSearch: is_address_search
+			}, '*');
 		}
 
 		var iframes = document.getElementsByTagName('iframe');
-	        for (var i = 0; i < iframes.length; i++) {
+		for (var i = 0; i < iframes.length; i++) {
 			iframes[i].contentWindow.postMessage({
 				message_addon: "quickdrag_we_set_str",
-				SelectStr : send_data,
-				IsImage : is_image,
-				IsBase64 : is_base64,
-				IsAddressSearch : is_address_search
-		    	}, '*');
+				SelectStr: send_data,
+				IsImage: is_image,
+				IsBase64: is_base64,
+				IsAddressSearch: is_address_search
+			}, '*');
 		}
 	}
 }
@@ -128,24 +125,23 @@ function handleDragStart(e) {
 	g_IsAddressSearch = false;
 	g_SelectStr = "";
 
-	if("[object HTMLImageElement]" === e.srcElement.toString()){
+	if ("[object HTMLImageElement]" === e.srcElement.toString()) {
 		g_IsImage = true;
 		g_SelectStr = e.srcElement.currentSrc.toString();
 		var hasScheme = /^(?:(?:( +)?h?tt|hxx)ps?|ftp|chrome|file):\/\//i;
-		if(false === hasScheme.test(g_SelectStr)) {
+		if (false === hasScheme.test(g_SelectStr)) {
 			g_IsBase64 = true;
 		}
 	} else {
 		if (true === isURL(e.dataTransfer.getData("text/plain"))) {
-			if(e.srcElement.getElementsByTagName('img').length > 0 && true === g_settingIsPreferSaveImage) {
+			if (e.srcElement.getElementsByTagName('img').length > 0 && true === g_settingIsPreferSaveImage) {
 				g_IsImage = true;
 				g_SelectStr = e.srcElement.getElementsByTagName('img')[0].src;
 				var hasScheme = /^(?:(?:( +)?h?tt|hxx)ps?|ftp|chrome|file):\/\//i;
-				if(false === hasScheme.test(g_SelectStr)) {
+				if (false === hasScheme.test(g_SelectStr)) {
 					g_IsBase64 = true;
 				}
-			}
-			else {
+			} else {
 				g_IsAddressSearch = true;
 				g_SelectStr = e.dataTransfer.getData("text/plain");
 				g_SelectStr = g_SelectStr.replace(/^ +/i, "");
@@ -170,8 +166,7 @@ function handleDragStart(e) {
 }
 
 // Base64データをBlobデータに変換
-function Base64toBlob(base64)
-{
+function Base64toBlob(base64) {
 	var tmp = base64.split(',');
 	var data = atob(tmp[1]);
 	var mime = tmp[0].split(':')[1].split(';')[0];
@@ -179,7 +174,9 @@ function Base64toBlob(base64)
 	for (var i = 0; i < data.length; i++) {
 		buf[i] = data.charCodeAt(i);
 	}
-	var blob = new Blob([buf], { type: mime });
+	var blob = new Blob([buf], {
+		type: mime
+	});
 	return blob;
 }
 
@@ -191,16 +188,16 @@ function handleDrop(e) {
 
 	eventInvalid(e);
 
-	if("" === g_SelectStr) {
+	if ("" === g_SelectStr) {
 		return;
 	}
 
-	if(true === g_IsImage) {
+	if (true === g_IsImage) {
 		// 画像の場合
-		if(false === g_settingIsSaveImage) {
+		if (false === g_settingIsSaveImage) {
 			return;
 		}
-		if(true === g_IsBase64) {
+		if (true === g_IsBase64) {
 			var name = "." + g_SelectStr.toString().slice(g_SelectStr.indexOf('/') + 1, g_SelectStr.indexOf(';'));
 			var blob = Base64toBlob(g_SelectStr);
 			window.navigator.msSaveOrOpenBlob(blob, name);
@@ -213,52 +210,52 @@ function handleDrop(e) {
 	} else {
 		// タブを開く場合
 		var isforground = true;
-		if(g_IsAddressSearch) {
+		if (g_IsAddressSearch) {
 			isforground = g_settingIsAddressForground;
 		} else {
 			isforground = g_settingIsSearchForground;
 		}
 		// background.jsにメッセージを送信
 		browser.runtime.sendMessage({
-			type: 'searchURL',
-			value: g_SelectStr,
-			isforground: isforground,
-			tab: g_settingNewTabPosition,
-		},
-		// コールバック関数
-		function (response) {
-			if (response) {
-				// response
-			}
-		});
+				type: 'searchURL',
+				value: g_SelectStr,
+				isforground: isforground,
+				tab: g_settingNewTabPosition,
+			},
+			// コールバック関数
+			function (response) {
+				if (response) {
+					// response
+				}
+			});
 	}
 }
 
 
-browser.storage.local.get(["searchEngine", "tabPosition", "checkboxArray"], function(storage_data){
-		if('searchEngine' in storage_data) {
-			updateParamEngine(storage_data.searchEngine);
-		}
-		
-		if('tabPosition' in storage_data) {
-			updateNewTabPosition(storage_data.tabPosition);
-		}
+browser.storage.local.get(["searchEngine", "tabPosition", "checkboxArray"], function (storage_data) {
+	if ('searchEngine' in storage_data) {
+		updateParamEngine(storage_data.searchEngine);
+	}
 
-		if('checkboxArray' in storage_data) {
-			updateParamcheckboxArray(storage_data.checkboxArray);
-		}
+	if ('tabPosition' in storage_data) {
+		updateNewTabPosition(storage_data.tabPosition);
+	}
+
+	if ('checkboxArray' in storage_data) {
+		updateParamcheckboxArray(storage_data.checkboxArray);
+	}
 });
-browser.storage.onChanged.addListener(function(storage_data_obj, area) {
+browser.storage.onChanged.addListener(function (storage_data_obj, area) {
 	if (area == "local") {
-		if('searchEngine' in storage_data_obj) {
+		if ('searchEngine' in storage_data_obj) {
 			updateParamEngine(storage_data_obj.searchEngine.newValue);
 		}
-		
-		if('tabPosition' in storage_data_obj) {
+
+		if ('tabPosition' in storage_data_obj) {
 			updateNewTabPosition(storage_data_obj.tabPosition.newValue);
 		}
 
-		if('checkboxArray' in storage_data_obj) {
+		if ('checkboxArray' in storage_data_obj) {
 			updateParamcheckboxArray(storage_data_obj.checkboxArray.newValue);
 		}
 	}
@@ -270,14 +267,14 @@ document.addEventListener("drop", handleDrop, false);
 window.addEventListener('message', receiveMessage, false);
 var iframes = document.getElementsByTagName('iframe');
 for (var i = 0; i < iframes.length; i++) {
-	iframes[i].onload = function() {
+	iframes[i].onload = function () {
 		iframes[i].addEventListener('message', receiveMessage, false);
 	};
 }
 
 var frames = document.getElementsByTagName('frame');
 for (var i = 0; i < frames.length; i++) {
-	frames[i].onload = function() {
+	frames[i].onload = function () {
 		frames[i].addEventListener('message', receiveMessage, false);
 	};
 }

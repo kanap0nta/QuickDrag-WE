@@ -3,7 +3,7 @@
 function setLanguage(language) {
 	var lang_set_flag = false;
 	for (var language_tbl in obj) {
-		if(language_tbl === language[0]) {
+		if (language_tbl === language[0]) {
 			document.getElementById("setting-title").textContent = obj[language_tbl]["setting_title"];
 			document.getElementById("engine-title").textContent = obj[language_tbl]["engine_title"];
 			document.getElementById("is-address-forground").textContent = obj[language_tbl]["is_address_forground"];
@@ -21,7 +21,7 @@ function setLanguage(language) {
 		}
 	}
 
-	if(false === lang_set_flag) {
+	if (false === lang_set_flag) {
 		document.getElementById("setting-title").textContent = obj["en"]["setting_title"];
 		document.getElementById("engine-title").textContent = obj["en"]["engine_title"];
 		document.getElementById("is-address-forground").textContent = obj["en"]["is_address_forground"];
