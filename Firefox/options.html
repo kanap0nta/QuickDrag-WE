@@ -1,61 +1,60 @@
 <!DOCTYPE html>
-
 <html>
   <head>
     <meta charset="utf-8">
     <link rel="stylesheet" href="options.css"/>
   </head>
-
   <body>
-
-   <div id = "setting-title" class="title" ></div>
-
+    <div id = "setting-title" class="title" ></div>
     <p></p>
-
     <section>
       <span id = "engine-title" class="label"></span>
       <select id="engine">
-        <option value="google" selected>Google</option> 
+        <option value="google" selected>Google</option>
         <option value="bing">Bing</option>
         <option value="baidu">Baidu</option>
         <option value="yandex">Yandex</option>
-	<option value="yandex_ru">Yandex RU</option>
-	<option value="yahoo_com">Yahoo</option>
-	<option value="yahoo_japan">Yahoo Japan</option>
-	<option value="naver">Naver</option>
-	<option value="duckduckgo">DuckDuckGo</option>
-	<option value="so">360捜索</option>
-	<option value="ask">Ask</option>
+        <option value="yandex_ru">Yandex RU</option>
+        <option value="yahoo_com">Yahoo</option>
+        <option value="yahoo_japan">Yahoo Japan</option>
+        <option value="naver">Naver</option>
+        <option value="duckduckgo">DuckDuckGo</option>
+        <option value="so">360捜索</option>
+        <option value="ask">Ask</option>
       </select>
     </section>
-
     <p></p>
-
     <section>
       <span id = "tab-title" class="label"></span>
       <select id="tab">
-        <option value="right" id="tab-open-right" selected></option> 
+        <option value="right" id="tab-open-right" selected></option>
         <option value="left" id="tab-open-left"></option>
         <option value="last" id="tab-open-last"></option>
         <option value="first" id="tab-open-first"></option>
       </select>
     </section>
-
     <p></p>
-
     <section class="data-types">
-      <label><input type="checkbox" checked="true" data-type="is_address_forground"/><span id="is-address-forground"></span></label>
-      <label><input type="checkbox" checked="true" data-type="is_search_forground"/><span id="is-search-forground"></span></label>
-      <label><input type="checkbox" checked="true" data-type="is_save_image"/><span id="is-save-image"></span></label>
-      <label><input type="checkbox" checked="true" data-type="is_prefer_save_image"/><span id="is-prefer-save-image"></span></label>
+      <label>
+        <input type="checkbox" checked="true" data-type="is_address_forground"/>
+        <span id="is-address-forground"></span>
+      </label>
+      <label>
+        <input type="checkbox" checked="true" data-type="is_search_forground"/>
+        <span id="is-search-forground"></span>
+      </label>
+      <label>
+        <input type="checkbox" checked="true" data-type="is_save_image"/>
+        <span id="is-save-image"></span>
+      </label>
+      <label>
+        <input type="checkbox" checked="true" data-type="is_prefer_save_image"/>
+        <span id="is-prefer-save-image"></span>
+      </label>
     </section>
-
     <p></p>
-
     <input type="button" value="" id="save-button"/>
-
     <script src="language.js"></script>
     <script src="options.js"></script>
   </body>
-
 </html>
