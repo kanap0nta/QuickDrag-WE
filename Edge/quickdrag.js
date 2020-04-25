@@ -64,7 +64,7 @@ function getEngineURL(selectedEngine) {
 
 // デフォルトイベントを無効化
 function eventInvalid(e) {
-	if (e.preventDefault) {
+	if (e.preventDefault && false === e.shiftKey) {
 		e.preventDefault();
 	}
 }
@@ -202,15 +202,47 @@ function handleDrop(e) {
 			var blob = Base64toBlob(g_SelectStr);
 			window.navigator.msSaveOrOpenBlob(blob, name);
 		} else {
-			var anchor = document.createElement('a');
-			anchor.href = g_SelectStr;
-			anchor.download = '';
-			anchor.click();
+			if (true === e.altKey && false === e.ctrlKey) {
+				browser.runtime.sendMessage({
+						type: 'searchURL',
+						value: g_SelectStr,
+						isforground: true,
+						tab: g_settingNewTabPosition,
+					},
+					// コールバック関数
+					function (response) {
+						if (response) {
+							// response
+						}
+					});
+			} else {
+				var anchor = document.createElement('a');
+				anchor.href = g_SelectStr;
+				anchor.download = '';
+				anchor.click();
+			}
 		}
 	} else {
 		// タブを開く場合
+		// Ctrlキーが押されている場合はクリップボードにコピー // Edgeたど上手くいかない
+		if (true === e.ctrlKey) {
+			var clip = document.createElement("textarea");
+			clip.value = e.dataTransfer.getData("text/plain");
+			document.body.appendChild(clip);
+			clip.select();
+			document.execCommand("copy");
+			clip.parentElement.removeChild(clip);
+		}
 		var isforground = true;
 		if (g_IsAddressSearch) {
+			// リンクでAltキーが押されている場合はダウンロード
+			if (true === e.altKey && false === e.ctrlKey) {
+				var anchor = document.createElement('a');
+				anchor.href = g_SelectStr;
+				anchor.download = '';
+				anchor.click();
+				return;
+			}
 			isforground = g_settingIsAddressForground;
 		} else {
 			isforground = g_settingIsSearchForground;

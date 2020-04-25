@@ -64,7 +64,7 @@ function getEngineURL(selectedEngine) {
 
 // デフォルトイベントを無効化
 function eventInvalid(e) {
-	if (e.preventDefault) {
+	if (e.preventDefault && false === e.shiftKey) {
 		e.preventDefault();
 	}
 }
@@ -193,17 +193,23 @@ function handleDrop(e) {
 		if (false === g_settingIsSaveImage) {
 			return;
 		}
-		if (true === g_IsBase64) {
+		// Ctrlキーが押されている場合は画像をAPI使わずに保存
+		if (true === g_IsBase64 || true === e.ctrlKey) {
 			var anchor = document.createElement('a');
 			anchor.href = g_SelectStr;
 			anchor.download = '';
 			anchor.click();
 		} else {
+			// Altキーが押されている場合は別タブに画像表示
+			var message_type = 'downloadImage';
+			if (true === e.altKey && false === e.ctrlKey) {
+				message_type = 'searchURL';
+			}
 			// background.jsにメッセージを送信
 			chrome.runtime.sendMessage({
-					type: 'downloadImage',
+					type: message_type,
 					value: g_SelectStr,
-					isforground: isforground,
+					isforground: true,
 					tab: g_settingNewTabPosition,
 				},
 				// コールバック関数
@@ -215,15 +221,29 @@ function handleDrop(e) {
 		}
 	} else {
 		// タブを開く場合
+		// Ctrlキーが押されている場合はクリップボードにコピー
+		if (true === e.ctrlKey) {
+			var clip = document.createElement("textarea");
+			clip.value = e.dataTransfer.getData("text/plain");
+			document.body.appendChild(clip);
+			clip.select();
+			document.execCommand("copy");
+			clip.parentElement.removeChild(clip);
+		}
+		var message_type = 'searchURL';
 		var isforground = true;
 		if (g_IsAddressSearch) {
+			// リンクでAltキーが押されている場合はダウンロード
+			if (true === e.altKey && false === e.ctrlKey) {
+				message_type = 'downloadImage';
+			}
 			isforground = g_settingIsAddressForground;
 		} else {
 			isforground = g_settingIsSearchForground;
 		}
 		// background.jsにメッセージを送信
 		chrome.runtime.sendMessage({
-				type: 'searchURL',
+				type: message_type,
 				value: g_SelectStr,
 				isforground: isforground,
 				tab: g_settingNewTabPosition,
