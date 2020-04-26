@@ -125,6 +125,10 @@ function handleDragStart(e) {
 	g_IsAddressSearch = false;
 	g_SelectStr = "";
 
+	if(true === e.shiftKey) {
+		return;
+	}
+
 	if ("[object HTMLImageElement]" === e.srcElement.toString()) {
 		g_IsImage = true;
 		g_SelectStr = e.srcElement.currentSrc.toString();
@@ -169,7 +173,7 @@ function handleDragStart(e) {
 
 // ドラッグオーバー
 function handleDragOver(e) {
-	if ("INPUT" === e.target.nodeName.toString() || "TEXTAREA" === e.target.nodeName.toString()) {
+	if ("INPUT" === e.target.nodeName.toString() || "TEXTAREA" === e.target.nodeName.toString() || true === e.shiftKey) {
 		return;
 	}
 
@@ -178,7 +182,7 @@ function handleDragOver(e) {
 
 // ドロップ
 function handleDrop(e) {
-	if ("INPUT" === e.target.nodeName.toString() || "TEXTAREA" === e.target.nodeName.toString()) {
+	if ("INPUT" === e.target.nodeName.toString() || "TEXTAREA" === e.target.nodeName.toString() || true === e.shiftKey) {
 		return;
 	}
 
