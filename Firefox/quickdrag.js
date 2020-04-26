@@ -137,6 +137,10 @@ function handleDragStart(e) {
 	g_IsAddressSearch = false;
 	g_SelectStr = "";
 
+	if(true === e.shiftKey) {
+		return;
+	}
+
 	if ("[object HTMLImageElement]" === e.explicitOriginalTarget.toString()) {
 		if ("undefined" === typeof e.target.href || true === g_settingIsPreferSaveImage) {
 			g_IsImage = true;
@@ -175,7 +179,7 @@ function handleDragStart(e) {
 
 // ドロップ
 function handleDrop(e) {
-	if ("INPUT" === e.target.nodeName.toString() || "TEXTAREA" === e.target.nodeName.toString()) {
+	if ("INPUT" === e.target.nodeName.toString() || "TEXTAREA" === e.target.nodeName.toString() || true === e.shiftKey) {
 		return;
 	}
 
