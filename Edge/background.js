@@ -14,11 +14,14 @@ browser.runtime.onMessage.addListener(
 	}
 );
 
-// アクティブなタブを取得
-function getActiveTabIndex(tabs) {
+// アクティブなタブの情報を取得
+function getActiveTabInfo(tabs) {
+console.log(tabs);
 	for (var tab of tabs) {
 		if (tab.active) {
-			return tab.index;
+			return { openIndex: tab.index,
+				 openId: tab.id
+			};
 		}
 	}
 }
@@ -30,19 +33,22 @@ function searchURL(request, sender, callback) {
 	}, function (tabs) {
 		switch (request.tab) {
 		case 'right':
-			var openIndex = getActiveTabIndex(tabs) + 1;
+			var { openIndex, openId } = getActiveTabInfo(tabs);
+			openIndex += + 1;
 			browser.tabs.create({
 				url: request.value,
 				active: request.isforground,
-				index: openIndex
+				index: openIndex,
+				openerTabId: openId
 			});
 			break;
 		case 'left':
-			var openIndex = getActiveTabIndex(tabs);
+			var { openIndex, openId } = getActiveTabInfo(tabs);
 			browser.tabs.create({
 				url: request.value,
 				active: request.isforground,
-				index: openIndex
+				index: openIndex,
+				openerTabId: openId
 			});
 			break;
 		case 'last':
