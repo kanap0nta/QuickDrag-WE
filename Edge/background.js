@@ -16,7 +16,6 @@ browser.runtime.onMessage.addListener(
 
 // アクティブなタブの情報を取得
 function getActiveTabInfo(tabs) {
-console.log(tabs);
 	for (var tab of tabs) {
 		if (tab.active) {
 			return { openIndex: tab.index,

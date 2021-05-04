@@ -28,7 +28,7 @@ function isURL(str) {
 
 // 設定パラメータ更新 (検索エンジン)
 function updateParamEngine(storage_data) {
-	g_settingEngineURL = getEngineURL(storage_data);
+	g_settingEngineURL = storage_data;
 }
 
 // 設定パラメータ更新 (新規タブ位置)
@@ -42,24 +42,6 @@ function updateParamcheckboxArray(storage_data) {
 	g_settingIsSearchForground = storage_data.indexOf("is_search_forground") >= 0 ? true : false;
 	g_settingIsSaveImage = storage_data.indexOf("is_save_image") >= 0 ? true : false;
 	g_settingIsPreferSaveImage = storage_data.indexOf("is_prefer_save_image") >= 0 ? true : false;
-}
-
-// 検索エンジン文字列取得
-function getEngineURL(selectedEngine) {
-	const url = {
-		google: ()	=>	{ return "https://www.google.com/search?q=" },
-		bing: ()	=>	{ return "https://www.bing.com/search?q=" },
-		baidu: ()	=>	{ return "https://www.baidu.com/s?ie=utf-8&wd=" },
-		yandex: ()	=>	{ return "https://www.yandex.com/search/?text=" },
-		yandex_ru: ()	=>	{ return "https://yandex.ru/search/?text=" },
-		yahoo_com: ()	=>	{ return "https://search.yahoo.com/search?p=" },
-		yahoo_japan: ()	=>	{ return "https://search.yahoo.co.jp/search?p=" },
-		naver: ()	=>	{ return "https://search.naver.com/search.naver?&ie=utf8&query=" },
-		duckduckgo: ()	=>	{ return "https://duckduckgo.com/?q=" },
-		so: ()		=>	{ return "https://www.so.com/s?q=" },
-		ask: ()		=>	{ return "https://www.ask.com/web?q=" },
-	}
-	return url[selectedEngine].call();
 }
 
 // デフォルトイベントを無効化
@@ -262,9 +244,9 @@ function handleDrop(e) {
 }
 
 
-chrome.storage.local.get(["searchEngine", "tabPosition", "checkboxArray"], function (storage_data) {
-	if ('searchEngine' in storage_data) {
-		updateParamEngine(storage_data.searchEngine);
+chrome.storage.local.get(["searchEngine", "searchEngineURL", "tabPosition", "checkboxArray"], function (storage_data) {
+	if ('searchEngineURL' in storage_data) {
+		updateParamEngine(storage_data.searchEngineURL);
 	}
 
 	if ('tabPosition' in storage_data) {
@@ -277,8 +259,8 @@ chrome.storage.local.get(["searchEngine", "tabPosition", "checkboxArray"], funct
 });
 chrome.storage.onChanged.addListener(function (storage_data_obj, area) {
 	if (area == "local") {
-		if ('searchEngine' in storage_data_obj) {
-			updateParamEngine(storage_data_obj.searchEngine.newValue);
+		if ('searchEngineURL' in storage_data_obj) {
+			updateParamEngine(storage_data_obj.searchEngineURL.newValue);
 		}
 
 		if ('tabPosition' in storage_data_obj) {

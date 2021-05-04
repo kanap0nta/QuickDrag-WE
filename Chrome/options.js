@@ -1,8 +1,9 @@
 // opeionts.js
 // 保存Wrapper
-function saveStrage(searchEngine, tabPosition, checkboxArray) {
+function saveStrage(searchEngine, searchEngineURL, tabPosition, checkboxArray) {
 	chrome.storage.local.set({
 		'searchEngine': searchEngine,
+		'searchEngineURL': searchEngineURL,
 		'tabPosition': tabPosition,
 		'checkboxArray': checkboxArray
 	});
@@ -14,6 +15,11 @@ function storeSettings() {
 	function getEngine() {
 		var engine = document.querySelector("#engine");
 		return engine.value;
+	}
+
+	function getEngineURL() {
+		var url = document.querySelector('[name="url"]');
+		return url.value;
 	}
 
 	function getTabPosition() {
@@ -33,10 +39,11 @@ function storeSettings() {
 	}
 
 	const searchEngine = getEngine();
+	const searchEngineURL = getEngineURL();
 	const tabPosition = getTabPosition();
 	const checkboxArray = getTypes();
 
-	saveStrage(searchEngine, tabPosition, checkboxArray); // データ保存
+	saveStrage(searchEngine, searchEngineURL, tabPosition, checkboxArray); // データ保存
 }
 
 // UI更新
@@ -44,9 +51,10 @@ function updateUI(restoredSettings) {
 	if ("undefined" === typeof document) {
 		// インストール時、データがないためデフォルト値を使用
 		const searchEngine = "google";
+		const searchEngineURL = "https://www.google.com/search?q=";
 		const tabPosition = "right";
 		const checkboxArray = ["is_address_forground", "is_search_forground", "is_save_image", "is_prefer_save_image"];
-		saveStrage(searchEngine, tabPosition, checkboxArray); // データ保存
+		saveStrage(searchEngine, searchEngineURL, tabPosition, checkboxArray); // データ保存
 		return;
 	}
 
@@ -56,6 +64,14 @@ function updateUI(restoredSettings) {
 	} else {
 		selectList.value = restoredSettings.searchEngine;
 	}
+
+	var urlData = document.querySelector('[name="url"]');
+	if ("undefined" === typeof restoredSettings.searchEngineURL) {
+		urlData.value = "https://www.google.com/search?q=";
+	} else {
+		urlData.value = restoredSettings.searchEngineURL;
+	}
+	urlData.readOnly = Boolean(Number(selectList.selectedOptions[0].dataset.isreadonly));
 
 	var selectTabPos = document.querySelector("#tab");
 	if ("undefined" === typeof restoredSettings.tabPosition) {
@@ -80,7 +96,16 @@ function updateUI(restoredSettings) {
 	}
 }
 
-chrome.storage.local.get(["searchEngine", "tabPosition", "checkboxArray"], updateUI);
+chrome.storage.local.get(["searchEngine", "searchEngineURL", "tabPosition", "checkboxArray"], updateUI);
 
 const saveButton = document.querySelector("#save-button");
 saveButton.addEventListener("click", storeSettings);
+document.addEventListener("DOMContentLoaded", _ => {
+	chrome.storage.local.get(["searchEngine", "searchEngineURL",  "tabPosition", "checkboxArray"], updateUI);
+	const selectList = document.querySelector('[id="engine"]');
+	const urlData = document.querySelector('[name="url"]');
+	selectList.addEventListener("change", ev => {
+		urlData.value = selectList.selectedOptions[0].dataset.url;
+		urlData.readOnly = Boolean(Number(selectList.selectedOptions[0].dataset.isreadonly));
+	});
+});
