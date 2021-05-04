@@ -10,18 +10,20 @@
     <section>
       <span id = "engine-title" class="label"></span>
       <select id="engine">
-        <option value="google" selected>Google</option>
-        <option value="bing">Bing</option>
-        <option value="baidu">Baidu</option>
-        <option value="yandex">Yandex</option>
-        <option value="yandex_ru">Yandex RU</option>
-        <option value="yahoo_com">Yahoo</option>
-        <option value="yahoo_japan">Yahoo Japan</option>
-        <option value="naver">Naver</option>
-        <option value="duckduckgo">DuckDuckGo</option>
-        <option value="so">360捜索</option>
-        <option value="ask">Ask</option>
+        <option value="google" data-isreadonly="1" data-url="https://www.google.com/search?q=" selected>Google</option>
+        <option value="bing" data-isreadonly="1" data-url="https://www.bing.com/search?q=">Bing</option>
+        <option value="baidu" data-isreadonly="1" data-url="https://www.baidu.com/s?ie=utf-8&wd=">Baidu</option>
+        <option value="yandex" data-isreadonly="1" data-url="https://www.yandex.com/search/?text=">Yandex</option>
+        <option value="yandex_ru" data-isreadonly="1" data-url="https://yandex.ru/search/?text=">Yandex RU</option>
+        <option value="yahoo_com" data-isreadonly="1" data-url="https://search.yahoo.com/search?p=">Yahoo</option>
+        <option value="yahoo_japan" data-isreadonly="1" data-url="https://search.yahoo.co.jp/search?p=">Yahoo Japan</option>
+        <option value="naver" data-isreadonly="1" data-url="https://search.naver.com/search.naver?&ie=utf8&query=">Naver</option>
+        <option value="duckduckgo" data-isreadonly="1" data-url="https://duckduckgo.com/?q=">DuckDuckGo</option>
+        <option value="so" data-isreadonly="1" data-url="https://www.so.com/s?q=">360捜索</option>
+        <option value="ask" data-isreadonly="1" data-url="https://www.ask.com/web?q=">Ask</option>
+        <option value="custom" data-isreadonly="0" data-url="https://"> - Custom - </option>
       </select>
+    <input name="url" value="" size="50"/>
     </section>
     <p></p>
     <section>
@@ -53,7 +55,7 @@
       </label>
     </section>
     <p></p>
-    <input type="button" value="" id="save-button"/>
+    <input type="button" value="" id="save-button" style="width:35%;"/>
     <script src="language.js"></script>
     <script src="options.js"></script>
   </body>
