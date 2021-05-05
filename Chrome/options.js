@@ -96,11 +96,9 @@ function updateUI(restoredSettings) {
 	}
 }
 
-chrome.storage.local.get(["searchEngine", "searchEngineURL", "tabPosition", "checkboxArray"], updateUI);
-
-const saveButton = document.querySelector("#save-button");
-saveButton.addEventListener("click", storeSettings);
 document.addEventListener("DOMContentLoaded", _ => {
+	const saveButton = document.querySelector("#save-button");
+	saveButton.addEventListener("click", storeSettings);
 	chrome.storage.local.get(["searchEngine", "searchEngineURL",  "tabPosition", "checkboxArray"], updateUI);
 	const selectList = document.querySelector('[id="engine"]');
 	const urlData = document.querySelector('[name="url"]');

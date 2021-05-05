@@ -152,7 +152,12 @@ function handleDragStart(e) {
 				return;
 		} else {
 			g_SelectStr = encodeURIComponent(e.dataTransfer.getData("text/plain"));
-			g_SelectStr = g_settingEngineURL + g_SelectStr;
+			var replace_select_str = g_settingEngineURL.replace("%s", g_SelectStr);
+			if (replace_select_str === g_settingEngineURL) {
+				g_SelectStr = g_settingEngineURL + g_SelectStr;
+			} else {
+				g_SelectStr = replace_select_str;
+			}
 		}
 	}
 
