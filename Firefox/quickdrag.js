@@ -77,9 +77,7 @@ function sendMessage(send_data, is_image, is_base64, is_address_search) {
 			IsBase64: is_base64,
 			IsAddressSearch: is_address_search
 		}, '*');
-
-		var i = 0;
-		while (null != window.top[i]) {
+		for (var i = 0; i < window.top.length; i++) {
 			window.top[i].postMessage({
 				message_addon: "quickdrag_we_set_str",
 				SelectStr: send_data,
@@ -87,7 +85,6 @@ function sendMessage(send_data, is_image, is_base64, is_address_search) {
 				IsBase64: is_base64,
 				IsAddressSearch: is_address_search
 			}, '*');
-			i++;
 		}
 	} else {
 		// トップウインドウの場合
@@ -285,14 +282,14 @@ document.addEventListener("drop", handleDrop, false);
 window.addEventListener('message', receiveMessage, false);
 var iframes = document.getElementsByTagName('iframe');
 for (var i = 0; i < iframes.length; i++) {
-	iframes[i].onload = function () {
+	iframes[i].addEventListener('load', function() {
 		iframes[i].addEventListener('message', receiveMessage, false);
-	};
+	}, false);
 }
 
 var frames = document.getElementsByTagName('frame');
 for (var i = 0; i < frames.length; i++) {
-	frames[i].onload = function () {
+	frames[i].addEventListener('load', function() {
 		frames[i].addEventListener('message', receiveMessage, false);
-	};
+	}, false);
 }
