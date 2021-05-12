@@ -48,7 +48,7 @@ function storeSettings() {
 
 // UI更新
 function updateUI(restoredSettings) {
-	if ("undefined" === typeof document) {
+	if (void 0 === document) {
 		// インストール時、データがないためデフォルト値を使用
 		const searchEngine = "google";
 		const searchEngineURL = "https://www.google.com/search?q=";
@@ -59,14 +59,14 @@ function updateUI(restoredSettings) {
 	}
 
 	var selectList = document.querySelector("#engine");
-	if ("undefined" === typeof restoredSettings.searchEngine) {
+	if (void 0 === restoredSettings.searchEngine) {
 		selectList.value = "google";
 	} else {
 		selectList.value = restoredSettings.searchEngine;
 	}
 
 	var urlData = document.querySelector('[name="url"]');
-	if ("undefined" === typeof restoredSettings.searchEngineURL) {
+	if (void 0 === restoredSettings.searchEngineURL) {
 		urlData.value = "https://www.google.com/search?q=";
 	} else {
 		urlData.value = restoredSettings.searchEngineURL;
@@ -74,14 +74,14 @@ function updateUI(restoredSettings) {
 	urlData.readOnly = Boolean(Number(selectList.selectedOptions[0].dataset.isreadonly));
 
 	var selectTabPos = document.querySelector("#tab");
-	if ("undefined" === typeof restoredSettings.tabPosition) {
+	if (void 0 === restoredSettings.tabPosition) {
 		selectTabPos.value = "right";
 	} else {
 		selectTabPos.value = restoredSettings.tabPosition;
 	}
 
 	var checkboxes = document.querySelectorAll(".data-types [type=checkbox]");
-	if (undefined === restoredSettings.checkboxArray) {
+	if (void 0 === restoredSettings.checkboxArray) {
 		for (let item of checkboxes) {
 			item.checked = true;
 		}

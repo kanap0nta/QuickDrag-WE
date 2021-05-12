@@ -256,7 +256,7 @@ function handleDrop(e) {
 }
 
 
-browser.storage.local.get(["searchEngine", "searchEngineURL", "tabPosition", "checkboxArray"], function (storage_data) {
+browser.storage.local.get(["searchEngineURL", "tabPosition", "checkboxArray"], function (storage_data) {
 	if ('searchEngineURL' in storage_data) {
 		updateParamEngine(storage_data.searchEngineURL);
 	}
