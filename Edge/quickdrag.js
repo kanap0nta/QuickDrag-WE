@@ -7,7 +7,7 @@ g_settingNewTabPosition = "right"; // 新規にタブを開く位置
 g_settingIsAddressForground = true; // Webアドレスをフォアグラウンドタブで開くかどうか
 g_settingIsSearchForground = true; // 検索結果をフォアグラウンドタブで開くかどうか
 g_settingIsSaveImage = true; // ドラッグ＆ドロップで画像を保存するかどうか
-g_settingIsPreferSaveImage = true; // ドリンク付き画像の場合、画像保存を優先するかどうか
+g_settingIsPreferSaveImage = true; // リンク付き画像の場合、画像保存を優先するかどうか
 
 // RFC3986判定
 function isRFC3986(str) {
