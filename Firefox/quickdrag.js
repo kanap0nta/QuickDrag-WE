@@ -124,7 +124,7 @@ function handleDragStart(e) {
 	}
 
 	if ("[object HTMLImageElement]" === e.explicitOriginalTarget.toString()) {
-		if (void 0 === typeof e.target.href || true === g_settingIsPreferSaveImage) {
+		if (void 0 === e.target.href || true === g_settingIsPreferSaveImage) {
 			g_IsImage = true;
 			g_SelectStr = e.explicitOriginalTarget.src.toString();
 			var hasScheme = /^(?:(?:( +)?h?tt|hxx)ps?|ftp|chrome|file):\/\//i;
