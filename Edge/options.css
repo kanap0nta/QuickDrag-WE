@@ -1,5 +1,7 @@
 @charset "utf-8";
 body {
+  font-family: "メイリオ", meiryo;
+  background: #ffffff;
   width: 25em;
   font-size: 1.0em;
   font-weight: 300;
@@ -17,4 +19,5 @@ label:hover {
 .title {
   font-size: 1.5em;
   margin-bottom: 0.5em;
+  background: linear-gradient(transparent 95%, #7e7e7e 95%);
 }
