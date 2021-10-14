@@ -1,10 +1,11 @@
 @charset "utf-8";
 body {
   font-family: "メイリオ", meiryo;
-  background: #ffffff;
   width: 25em;
   font-size: 1.0em;
   font-weight: 300;
+  color: #fafafa; background-color: #434343;
+
 }
 
 label {
@@ -13,11 +14,11 @@ label {
 }
 
 label:hover {
-  background-color: #EAEFF2;
+  background-color: #5a5a5a;
 }
 
 .title {
-  font-size: 1.5em;
+  font-size: 25px;
   margin-bottom: 0.5em;
   background: linear-gradient(transparent 95%, #7e7e7e 95%);
 }
