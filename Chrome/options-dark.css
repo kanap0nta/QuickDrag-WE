@@ -22,3 +22,7 @@ label:hover {
   margin-bottom: 0.5em;
   background: linear-gradient(transparent 95%, #7e7e7e 95%);
 }
+
+.url {
+ width: 100%; 
+}
