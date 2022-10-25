@@ -112,12 +112,17 @@ function sendMessage(send_data, is_image, is_base64, is_address_search) {
 	}
 }
 
-// ドラッグ開始
-function handleDragStart(e) {
+// 検索文字情報初期化
+function initStrInfo(){
 	g_IsImage = false;
 	g_IsBase64 = false;
 	g_IsAddressSearch = false;
 	g_SelectStr = "";
+}
+
+// ドラッグ開始
+function handleDragStart(e) {
+	initStrInfo();
 
 	if(true === e.shiftKey) {
 		return;
@@ -165,12 +170,27 @@ function handleDragStart(e) {
 // ドロップ
 function handleDrop(e) {
 	if ("INPUT" === e.target.nodeName.toString() || "TEXTAREA" === e.target.nodeName.toString() || true === e.shiftKey) {
+		initStrInfo();
+		sendMessage("", false, false, false);
 		return;
 	}
 
 	eventInvalid(e);
 
+	// ウインドウにファイルがドロップされたら無視
+	if (e.dataTransfer.items) {
+		[...e.dataTransfer.items].forEach((item, i) => {
+			if (item.kind === 'file') {
+				initStrInfo();
+				sendMessage("", false, false, false);
+				return;
+			}
+		});
+	}
+
 	if ("" === g_SelectStr) {
+		initStrInfo();
+		sendMessage("", false, false, false);
 		return;
 	}
 
