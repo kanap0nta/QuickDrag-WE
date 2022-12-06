@@ -113,18 +113,19 @@ function sendMessage(send_data, is_image, is_base64, is_address_search) {
 }
 
 // 検索文字情報初期化
-function initStrInfo(){
+function initStrInfo() {
 	g_IsImage = false;
 	g_IsBase64 = false;
 	g_IsAddressSearch = false;
 	g_SelectStr = "";
+	sendMessage("", false, false, false);
 }
 
 // ドラッグ開始
 function handleDragStart(e) {
 	initStrInfo();
 
-	if(true === e.shiftKey) {
+	if (true === e.shiftKey) {
 		return;
 	}
 
@@ -176,6 +177,7 @@ function handleDragStart(e) {
 // ドラッグオーバー
 function handleDragOver(e) {
 	if ("INPUT" === e.target.nodeName.toString() || "TEXTAREA" === e.target.nodeName.toString() || true === e.shiftKey) {
+		initStrInfo();
 		return;
 	}
 
@@ -186,7 +188,6 @@ function handleDragOver(e) {
 function handleDrop(e) {
 	if ("INPUT" === e.target.nodeName.toString() || "TEXTAREA" === e.target.nodeName.toString() || true === e.shiftKey) {
 		initStrInfo();
-		sendMessage("", false, false, false);
 		return;
 	}
 
@@ -195,9 +196,8 @@ function handleDrop(e) {
 	// ウインドウにファイルがドロップされたら無視
 	if (e.dataTransfer.items) {
 		[...e.dataTransfer.items].forEach((item, i) => {
-			if (item.kind === 'file') {
+			if ('file' === item.kind && "" === g_SelectStr) {
 				initStrInfo();
-				sendMessage("", false, false, false);
 				return;
 			}
 		});
@@ -205,13 +205,13 @@ function handleDrop(e) {
 
 	if ("" === g_SelectStr) {
 		initStrInfo();
-		sendMessage("", false, false, false);
 		return;
 	}
 
 	if (true === g_IsImage) {
 		// 画像の場合
 		if (false === g_settingIsSaveImage) {
+			initStrInfo();
 			return;
 		}
 		// Ctrlキーが押されている場合は画像をAPI使わずに保存
@@ -228,11 +228,11 @@ function handleDrop(e) {
 			}
 			// background.jsにメッセージを送信
 			chrome.runtime.sendMessage({
-					type: message_type,
-					value: g_SelectStr,
-					isforground: true,
-					tab: g_settingNewTabPosition,
-				},
+				type: message_type,
+				value: g_SelectStr,
+				isforground: true,
+				tab: g_settingNewTabPosition,
+			},
 				// コールバック関数
 				function (response) {
 					if (response) {
@@ -264,11 +264,11 @@ function handleDrop(e) {
 		}
 		// background.jsにメッセージを送信
 		chrome.runtime.sendMessage({
-				type: message_type,
-				value: g_SelectStr,
-				isforground: isforground,
-				tab: g_settingNewTabPosition,
-			},
+			type: message_type,
+			value: g_SelectStr,
+			isforground: isforground,
+			tab: g_settingNewTabPosition,
+		},
 			// コールバック関数
 			function (response) {
 				if (response) {
@@ -276,6 +276,7 @@ function handleDrop(e) {
 				}
 			});
 	}
+	initStrInfo();
 }
 
 
@@ -314,14 +315,14 @@ document.addEventListener("drop", handleDrop, false);
 window.addEventListener('message', receiveMessage, false);
 var iframes = document.getElementsByTagName('iframe');
 for (var i = 0; i < iframes.length; i++) {
-	iframes[i].addEventListener('load', function() {
+	iframes[i].addEventListener('load', function () {
 		iframes[i].addEventListener('message', receiveMessage, false);
 	}, false);
 }
 
 var frames = document.getElementsByTagName('frame');
 for (var i = 0; i < frames.length; i++) {
-	frames[i].addEventListener('load', function() {
+	frames[i].addEventListener('load', function () {
 		frames[i].addEventListener('message', receiveMessage, false);
 	}, false);
 }
