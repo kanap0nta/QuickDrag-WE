@@ -1,11 +1,11 @@
 # QuickDrag-WE
+
 QuickDrag Webextensions対応版
 
 インストール先
 
 ＜Firefox＞  
-https://addons.mozilla.org/ja/firefox/addon/quickdrag-we/
+<https://addons.mozilla.org/ja/firefox/addon/quickdrag-we/>
 
-
-＜Chrome＞  
-https://chrome.google.com/webstore/detail/quickdrag-for-chrome/dmmpggjbbkfmldkfonjnpbdcmienbjil
+＜Chrome、Edge＞  
+<https://chrome.google.com/webstore/detail/quickdrag-for-chrome/dmmpggjbbkfmldkfonjnpbdcmienbjil>
