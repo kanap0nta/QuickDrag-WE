@@ -121,6 +121,18 @@ function initStrInfo() {
 	sendMessage("", false, false, false);
 }
 
+// 画像を再帰的に探索
+function findFirstImageDescendant(node) {
+    for (var child = node.firstElementChild; child; child = child.nextElementSibling) {
+        if (child.constructor && child.constructor.name === "HTMLImageElement") {
+            return child;
+        }
+        var found = findFirstImageDescendant(child);
+        if (found) return found;
+    }
+    return null;
+}
+
 // ドラッグ開始
 function handleDragStart(e) {
 	initStrInfo();
@@ -129,17 +141,30 @@ function handleDragStart(e) {
 		return;
 	}
 
-	if ("[object HTMLImageElement]" === e.explicitOriginalTarget.toString()) {
-		if (void 0 === e.target.href || true === g_settingIsPreferSaveImage) {
+	if (/HTML.*Element/.test(e.target.constructor.name)) {
+		var target = e.target;
+		var isFoundImage = false;
+
+		if ("HTMLImageElement" != e.target.constructor.name && true === g_settingIsPreferSaveImage) {
+            var foundImg = findFirstImageDescendant(e.target);
+            if (foundImg) {
+                target = foundImg;
+                isFoundImage = true;
+            }
+		} else {
+			isFoundImage = true;
+		}
+
+		if (isFoundImage && void 0 === target.href) {
 			g_IsImage = true;
-			g_SelectStr = e.explicitOriginalTarget.src.toString();
+			g_SelectStr = target.src;
 			var hasScheme = /^(?:(?:( +)?h?tt|hxx)ps?|ftp|chrome|file):\/\//i;
 			if (false === hasScheme.test(g_SelectStr)) {
 				g_IsBase64 = true;
 			}
 		} else {
 			g_IsAddressSearch = true;
-			g_SelectStr = e.target.href;
+			g_SelectStr = target.href;
 		}
 	} else {
 		if (true === isRFC3986(e.dataTransfer.getData("text/plain").replace(/^ +/i, ""))) {
