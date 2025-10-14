@@ -121,7 +121,7 @@ function initStrInfo() {
 	sendMessage("", false, false, false);
 }
 
-// 画像を再帰的に探索
+// 画像の要素を再帰的に探索
 function findFirstImageDescendant(node) {
     for (var child = node.firstElementChild; child; child = child.nextElementSibling) {
         if (child.constructor && child.constructor.name === "HTMLImageElement") {
