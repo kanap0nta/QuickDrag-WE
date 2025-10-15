@@ -121,13 +121,13 @@ function initStrInfo() {
 	sendMessage("", false, false, false);
 }
 
-// 画像の要素を再帰的に探索
-function findFirstImageDescendant(node) {
+// 子要素を再帰的に探索し、画像がある場合、その要素を返す
+function findFirstImageChild(node) {
     for (var child = node.firstElementChild; child; child = child.nextElementSibling) {
         if (child.constructor && child.constructor.name === "HTMLImageElement") {
             return child;
         }
-        var found = findFirstImageDescendant(child);
+        var found = findFirstImageChild(child);
         if (found) return found;
     }
     return null;
@@ -145,12 +145,14 @@ function handleDragStart(e) {
 		var target = e.target;
 		var isFoundImage = false;
 
-		if ("HTMLImageElement" != e.target.constructor.name && true === g_settingIsPreferSaveImage) {
-            var foundImg = findFirstImageDescendant(e.target);
-            if (foundImg) {
-                target = foundImg;
-                isFoundImage = true;
-            }
+		if ("HTMLImageElement" != e.target.constructor.name) {
+			if (true === g_settingIsSaveImage && true === g_settingIsPreferSaveImage) {
+				var foundImg = findFirstImageChild(e.target);
+				if (foundImg) {
+					target = foundImg;
+					isFoundImage = true;
+				}
+			}
 		} else {
 			isFoundImage = true;
 		}

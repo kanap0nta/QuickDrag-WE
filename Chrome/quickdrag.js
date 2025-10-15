@@ -9,6 +9,52 @@ g_settingIsSearchForground = true; // 検索結果をフォアグラウンドタ
 g_settingIsSaveImage = true; // ドラッグ＆ドロップで画像を保存するかどうか
 g_settingIsPreferSaveImage = true; // リンク付き画像の場合、画像保存を優先するかどうか
 
+// Manifest V3 非同期ストレージプリロード
+let _qdSettingsReady = false;
+let _qdSettingsWaiters = [];
+
+function _qdOnSettingsReady(cb){ _qdSettingsReady ? cb() : _qdSettingsWaiters.push(cb); }
+
+function _qdResolveSettingsReady(){
+    _qdSettingsReady = true;
+    _qdSettingsWaiters.splice(0).forEach(f=>{ try{ f(); }catch(_e){} });
+}
+function applySettings(storage_data){
+    if(storage_data.searchEngineURL !== undefined) updateParamEngine(storage_data.searchEngineURL);
+    if(storage_data.tabPosition !== undefined) updateNewTabPosition(storage_data.tabPosition);
+    if(storage_data.checkboxArray !== undefined) updateParamcheckboxArray(storage_data.checkboxArray);
+}
+function preloadSettings(){
+    // chrome.storage は MV3 でも callback なので Promise 化
+    new Promise(res => chrome.storage.local.get(
+        ["searchEngineURL","tabPosition","checkboxArray"],
+        res
+    )).then(data => {
+        applySettings(data);
+    }).finally(_qdResolveSettingsReady);
+}
+preloadSettings();
+chrome.storage.onChanged.addListener((changes, area)=>{
+    if(area !== "local") return;
+    const diff = {
+        searchEngineURL: changes.searchEngineURL && changes.searchEngineURL.newValue,
+        tabPosition: changes.tabPosition && changes.tabPosition.newValue,
+        checkboxArray: changes.checkboxArray && changes.checkboxArray.newValue
+    };
+    applySettings(diff);
+});
+
+// 設定未読込時に来たドラッグイベントを待たせるためのラッパ
+function withSettings(fn){
+    return function(e){
+        if(_qdSettingsReady){
+            return fn(e);
+        } else {
+            _qdOnSettingsReady(()=>fn(e));
+        }
+    };
+}
+
 // RFC3986判定
 function isRFC3986(str) {
 	var hasRFC3986 = /^[a-z]([a-z]|[0-9]|[+\-.])*:(\/\/((([a-z]|[0-9]|[-._~])|%[0-9a-f][0-9a-f]|[!$&'()*+,;=]|:)*@)?(\[((([0-9a-f]{1,4}:){6}([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|::([0-9a-f]{1,4}:){5}([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|([0-9a-f]{1,4})?::([0-9a-f]{1,4}:){4}([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|(([0-9a-f]{1,4}:){0,1}[0-9a-f]{1,4})?::([0-9a-f]{1,4}:){3}([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|(([0-9a-f]{1,4}:){0,2}[0-9a-f]{1,4})?::([0-9a-f]{1,4}:){2}([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|(([0-9a-f]{1,4}:){0,3}[0-9a-f]{1,4})?::[0-9a-f]{1,4}:([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|(([0-9a-f]{1,4}:){0,4}[0-9a-f]{1,4})?::([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|(([0-9a-f]{1,4}:){0,5}[0-9a-f]{1,4})?::[0-9a-f]{1,4}|(([0-9a-f]{1,4}:){0,6}[0-9a-f]{1,4})?::)|v[0-9a-f]+\.(([a-z]|[0-9]|[-._~])|[!$&'()*+,;=]|:)+)]|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3}|(([a-z]|[0-9]|[-._~])|%[0-9a-f][0-9a-f]|[!$&'()*+,;=])*)(:\d*)?(\/((([a-z]|[0-9]|[-._~])|%[0-9a-f][0-9a-f]|[!$&'()*+,;=]|[:@]))*)*|\/(((([a-z]|[0-9]|[-._~])|%[0-9a-f][0-9a-f]|[!$&'()*+,;=]|[:@]))+(\/((([a-z]|[0-9]|[-._~])|%[0-9a-f][0-9a-f]|[!$&'()*+,;=]|[:@]))*)*)?|((([a-z]|[0-9]|[-._~])|%[0-9a-f][0-9a-f]|[!$&'()*+,;=]|[:@]))+(\/((([a-z]|[0-9]|[-._~])|%[0-9a-f][0-9a-f]|[!$&'()*+,;=]|[:@]))*)*|)(\?((([a-z]|[0-9]|[-._~])|%[0-9a-f][0-9a-f]|[!$&'()*+,;=]|[:@])|[\/?])*)?(#((([a-z]|[0-9]|[-._~])|%[0-9a-f][0-9a-f]|[!$&'()*+,;=]|[:@])|[\/?])*)?$/i;
@@ -121,13 +167,23 @@ function initStrInfo() {
 	sendMessage("", false, false, false);
 }
 
-// 画像の要素を再帰的に探索
-function findFirstImageDescendant(node) {
+// 親要素のにリンクがある場合その要素を返す
+function findFirstLinkParent(node) {
+	for (var parent = node.parentElement; parent; parent = parent.parentElement) {
+		if (parent.href) {
+			return parent;
+		}
+	}
+	return null;
+}
+
+// 子要素を再帰的に探索し、画像がある場合、その要素を返す
+function findFirstImageChild(node) {
     for (var child = node.firstElementChild; child; child = child.nextElementSibling) {
         if (child.constructor && child.constructor.name === "HTMLImageElement") {
             return child;
         }
-        var found = findFirstImageDescendant(child);
+        var found = findFirstImageChild(child);
         if (found) return found;
     }
     return null;
@@ -145,14 +201,26 @@ function handleDragStart(e) {
 		var target = e.target;
 		var isFoundImage = false;
 
-		if ("HTMLImageElement" != e.target.constructor.name && true === g_settingIsPreferSaveImage) {
-            var foundImg = findFirstImageDescendant(e.target);
-            if (foundImg) {
-                target = foundImg;
-                isFoundImage = true;
-            }
+		if ("HTMLImageElement" != e.target.constructor.name) {
+			if (true === g_settingIsSaveImage && true === g_settingIsPreferSaveImage) {
+				var foundImg = findFirstImageChild(e.target);
+				if (foundImg) {
+					target = foundImg;
+					isFoundImage = true;
+				}
+			}
 		} else {
-			isFoundImage = true;
+			if (true === g_settingIsSaveImage && true === g_settingIsPreferSaveImage) {
+				isFoundImage = true;
+			} else {
+				// chrome はリンク付き画像でも HTMLImageElement が取れてしまうため、親要素を確認してリンクが存在しているか確認する
+				var foundLink = findFirstLinkParent(e.target);
+				if (foundLink) {
+					target = foundLink;
+				} else {
+					isFoundImage = true;
+				}
+			}
 		}
 
 		if (isFoundImage && void 0 === target.href) {
@@ -299,50 +367,7 @@ function handleDrop(e) {
 	initStrInfo();
 }
 
-
-chrome.storage.local.get(["searchEngineURL", "tabPosition", "checkboxArray"], function (storage_data) {
-	if ('searchEngineURL' in storage_data) {
-		updateParamEngine(storage_data.searchEngineURL);
-	}
-
-	if ('tabPosition' in storage_data) {
-		updateNewTabPosition(storage_data.tabPosition);
-	}
-
-	if ('checkboxArray' in storage_data) {
-		updateParamcheckboxArray(storage_data.checkboxArray);
-	}
-});
-chrome.storage.onChanged.addListener(function (storage_data_obj, area) {
-	if (area == "local") {
-		if ('searchEngineURL' in storage_data_obj) {
-			updateParamEngine(storage_data_obj.searchEngineURL.newValue);
-		}
-
-		if ('tabPosition' in storage_data_obj) {
-			updateNewTabPosition(storage_data_obj.tabPosition.newValue);
-		}
-
-		if ('checkboxArray' in storage_data_obj) {
-			updateParamcheckboxArray(storage_data_obj.checkboxArray.newValue);
-		}
-	}
-});
-document.addEventListener("dragstart", handleDragStart, false);
-document.addEventListener("dragover", handleDragOver, false);
+document.addEventListener("dragstart", withSettings(handleDragStart), false);
+document.addEventListener("dragover", withSettings(handleDragOver), false);
 document.addEventListener("dragend", eventInvalid, false);
-document.addEventListener("drop", handleDrop, false);
-window.addEventListener('message', receiveMessage, false);
-var iframes = document.getElementsByTagName('iframe');
-for (var i = 0; i < iframes.length; i++) {
-	iframes[i].addEventListener('load', function () {
-		iframes[i].addEventListener('message', receiveMessage, false);
-	}, false);
-}
-
-var frames = document.getElementsByTagName('frame');
-for (var i = 0; i < frames.length; i++) {
-	frames[i].addEventListener('load', function () {
-		frames[i].addEventListener('message', receiveMessage, false);
-	}, false);
-}
+document.addEventListener("drop", withSettings(handleDrop), false);
