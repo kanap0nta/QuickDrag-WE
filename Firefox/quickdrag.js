@@ -121,7 +121,7 @@ function initStrInfo() {
 	sendMessage("", false, false, false);
 }
 
-// 子要素を再帰的に探索し、画像がある場合、その要素を返す
+// 子要素を再帰的に探索し、画像がある場合その要素を返す
 function findFirstImageChild(node) {
     for (var child = node.firstElementChild; child; child = child.nextElementSibling) {
         if (child.constructor && child.constructor.name === "HTMLImageElement") {
