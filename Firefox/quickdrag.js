@@ -141,12 +141,12 @@ function handleDragStart(e) {
 		return;
 	}
 
-	if (/HTML.*Element/.test(e.target.constructor.name)) {
+	if (/HTML.*Element/.test(e.target.constructor.name) && "HTMLTextAreaElement" != e.target.constructor.name) {
 		var target = e.target;
 		var isFoundImage = false;
 
 		if ("HTMLImageElement" != e.target.constructor.name) {
-			if (true === g_settingIsSaveImage && true === g_settingIsPreferSaveImage) {
+			if (true === g_settingIsPreferSaveImage) {
 				var foundImg = findFirstImageChild(e.target);
 				if (foundImg) {
 					target = foundImg;
@@ -192,6 +192,10 @@ function handleDragStart(e) {
 		}
 	}
 
+	if (false === g_settingIsSaveImage) {
+		g_IsImage = false;
+	}
+
 	sendMessage(g_SelectStr, g_IsImage, g_IsBase64, g_IsAddressSearch);
 }
 
@@ -221,10 +225,6 @@ function handleDrop(e) {
 
 	if (true === g_IsImage) {
 		// 画像の場合
-		if (false === g_settingIsSaveImage) {
-			initStrInfo();
-			return;
-		}
 		// Ctrlキーが押されている場合は画像をAPI使わずに保存
 		if (true === g_IsBase64 || true === e.ctrlKey) {
 			var anchor = document.createElement('a');
