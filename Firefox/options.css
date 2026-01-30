@@ -1,6 +1,7 @@
 @charset "utf-8";
+
 body {
-  font-family: "メイリオ", meiryo;
+  font-family: "メイリオ", Meiryo, sans-serif;
   background: #ffffff;
   width: 25em;
   font-size: 1.0em;
@@ -20,4 +21,14 @@ label:hover {
   font-size: 1.5em;
   margin-bottom: 0.5em;
   background: linear-gradient(transparent 95%, #7e7e7e 95%);
+}
+
+.url {
+  width: 100%;
+}
+
+.auto-save-notice {
+  font-size: 0.85em;
+  color: #666;
+  padding: 0.5em 0;
 }
