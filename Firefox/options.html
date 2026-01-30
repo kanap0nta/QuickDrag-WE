@@ -6,10 +6,10 @@
     <link rel="stylesheet" href="options-dark.css" media="(prefers-color-scheme: dark)">
   </head>
   <body>
-    <div id = "setting-title" class="title" ></div>
+    <div id="setting-title" class="title"></div>
     <p></p>
     <section>
-      <span id = "engine-title" class="label"></span>
+      <span id="engine-title" class="label"></span>
       <select id="engine">
         <option value="google" data-isreadonly="1" data-url="https://www.google.com/search?q=" selected>Google</option>
         <option value="google_usa" data-isreadonly="1" data-url="https://www.google.com/search?q=%s&pws=0&gl=us&gws_rd=cr">Google USA</option>
@@ -21,16 +21,16 @@
         <option value="yahoo_japan" data-isreadonly="1" data-url="https://search.yahoo.co.jp/search?p=">Yahoo Japan</option>
         <option value="naver" data-isreadonly="1" data-url="https://search.naver.com/search.naver?&ie=utf8&query=">Naver</option>
         <option value="duckduckgo" data-isreadonly="1" data-url="https://duckduckgo.com/?q=">DuckDuckGo</option>
-        <option value="so" data-isreadonly="1" data-url="https://www.so.com/s?q=">360捜索</option>
+        <option value="so" data-isreadonly="1" data-url="https://www.so.com/s?q=">360搜索</option>
         <option value="ask" data-isreadonly="1" data-url="https://www.ask.com/web?q=">Ask</option>
         <option value="custom" data-isreadonly="0" data-url="https://"> - Custom - </option>
       </select>
       <br>
-    <input name="url" value="" size="60"/>
+      <input name="url" value="" size="60"/>
     </section>
     <p></p>
     <section>
-      <span id = "tab-title" class="label"></span>
+      <span id="tab-title" class="label"></span>
       <select id="tab">
         <option value="right" id="tab-open-right" selected></option>
         <option value="left" id="tab-open-left"></option>
@@ -58,7 +58,7 @@
       </label>
     </section>
     <p></p>
-    <input type="button" value="" id="save-button" style="width:35%;"/>
+    <div class="auto-save-notice" id="auto-save-notice"></div>
     <script src="language.js"></script>
     <script src="options.js"></script>
   </body>
