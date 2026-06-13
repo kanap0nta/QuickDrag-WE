@@ -340,7 +340,8 @@ function handleDragStart(event) {
 
   const isHTMLElement =
     /HTML.*Element/.test(event.target.constructor.name) &&
-    event.target.constructor.name !== "HTMLTextAreaElement";
+    event.target.constructor.name !== "HTMLTextAreaElement" &&
+    event.target.constructor.name !== "HTMLInputElement";
 
   if (isHTMLElement) {
     processDragFromElement(event);
@@ -442,7 +443,6 @@ function handleDragOver(event) {
   const targetNodeName = event.target.nodeName.toUpperCase();
 
   if (targetNodeName === "INPUT" || targetNodeName === "TEXTAREA" || event.shiftKey) {
-    resetState();
     return;
   }
 
