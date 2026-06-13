@@ -33,6 +33,13 @@ async function handleMessage(request, sender, sendResponse) {
         sendResponse({ success: true, message: `downloadImage: ${request.value}` });
         break;
 
+      case "getPageLoadedState": {
+        const { pageLoadedStates = {} } = await chrome.storage.session.get("pageLoadedStates");
+        const val = pageLoadedStates[String(request.tabId)];
+        sendResponse({ enabled: val ?? null });
+        break;
+      }
+
       default:
         sendResponse({ success: false, message: "Unknown message type" });
         break;
@@ -175,5 +182,140 @@ async function downloadImage(request) {
     throw error;
   }
 }
+
+
+// ========================================
+// パターンマッチング
+// ========================================
+
+function matchesPattern(hostname, pathname, pattern) {
+  const trimmed = pattern.trim();
+  if (!trimmed) return false;
+  const target = trimmed.includes("/") ? hostname + pathname : hostname;
+  const escaped = trimmed.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
+  try {
+    return new RegExp(`^${escaped}$`, "i").test(target);
+  } catch {
+    return false;
+  }
+}
+
+function isSiteDisabled(hostname, pathname, patterns) {
+  return patterns.some(p => matchesPattern(hostname, pathname, p));
+}
+
+// ========================================
+// アイコン管理
+// ========================================
+
+let disabledIconCache = null;
+
+async function buildDisabledImageData(size) {
+  const response = await fetch(chrome.runtime.getURL(`icons/icon_${size}.png`));
+  const blob = await response.blob();
+  const bitmap = await createImageBitmap(blob);
+  const canvas = new OffscreenCanvas(size, size);
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(bitmap, 0, 0);
+  const imageData = ctx.getImageData(0, 0, size, size);
+  const d = imageData.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const gray = Math.round(0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]);
+    d[i] = d[i + 1] = d[i + 2] = gray;
+    d[i + 3] = Math.round(d[i + 3] * 0.5);
+  }
+  return imageData;
+}
+
+async function getDisabledIconData() {
+  if (!disabledIconCache) {
+    disabledIconCache = {
+      48: await buildDisabledImageData(48),
+      96: await buildDisabledImageData(96),
+      128: await buildDisabledImageData(128),
+    };
+  }
+  return disabledIconCache;
+}
+
+async function updateTabIcon(tabId, url) {
+  if (!url) return;
+  try {
+    const urlObj = new URL(url);
+    if (urlObj.protocol !== "http:" && urlObj.protocol !== "https:" && urlObj.protocol !== "file:") return;
+    let disabled;
+    const { pageLoadedStates = {} } = await chrome.storage.session.get("pageLoadedStates");
+    if (String(tabId) in pageLoadedStates) {
+      // ページが実際に読み込まれた時の状態を使う（リロード前後でアイコンが変わる）
+      disabled = !pageLoadedStates[String(tabId)];
+    } else {
+      // pageLoadedStatesにない場合は現在の設定にフォールバック
+      const data = await chrome.storage.local.get("disabledPatterns");
+      const patterns = data.disabledPatterns ?? [];
+      disabled = isSiteDisabled(urlObj.hostname, urlObj.pathname, patterns);
+    }
+    if (disabled) {
+      await chrome.action.setIcon({ imageData: await getDisabledIconData(), tabId });
+    } else {
+      await chrome.action.setIcon({
+        path: { 48: "icons/icon_48.png", 96: "icons/icon_96.png", 128: "icons/icon_128.png" },
+        tabId,
+      });
+    }
+  } catch { /* ignore */ }
+}
+
+// ========================================
+// タブ読み込み状態管理
+// ========================================
+
+async function recordPageLoadedState(tabId, url) {
+  try {
+    const urlObj = new URL(url);
+    if (urlObj.protocol !== "http:" && urlObj.protocol !== "https:" && urlObj.protocol !== "file:") return;
+    const data = await chrome.storage.local.get("disabledPatterns");
+    const patterns = data.disabledPatterns ?? [];
+    const enabled = !isSiteDisabled(urlObj.hostname, urlObj.pathname, patterns);
+    const { pageLoadedStates = {} } = await chrome.storage.session.get("pageLoadedStates");
+    pageLoadedStates[String(tabId)] = enabled;
+    await chrome.storage.session.set({ pageLoadedStates });
+  } catch { /* ignore */ }
+}
+
+// ========================================
+// タブ・ストレージ監視
+// ========================================
+
+chrome.tabs.onActivated.addListener(async ({ tabId }) => {
+  try {
+    const tab = await chrome.tabs.get(tabId);
+    await updateTabIcon(tabId, tab.url);
+  } catch { /* ignore */ }
+});
+
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+  if (changeInfo.status === "complete" && tab.url) {
+    await recordPageLoadedState(tabId, tab.url);
+  }
+  if (changeInfo.url || changeInfo.status === "complete") {
+    await updateTabIcon(tabId, tab.url);
+  }
+});
+
+chrome.tabs.onRemoved.addListener(async (tabId) => {
+  try {
+    const { pageLoadedStates = {} } = await chrome.storage.session.get("pageLoadedStates");
+    delete pageLoadedStates[String(tabId)];
+    await chrome.storage.session.set({ pageLoadedStates });
+  } catch { /* ignore */ }
+});
+
+chrome.storage.onChanged.addListener(async (changes, area) => {
+  if (area !== "local" || !changes.disabledPatterns) return;
+  const tabs = await chrome.tabs.query({});
+  for (const tab of tabs) {
+    await updateTabIcon(tab.id, tab.url);
+  }
+});
 
 })();

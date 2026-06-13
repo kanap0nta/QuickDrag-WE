@@ -562,6 +562,52 @@ async function loadSettings() {
 }
 
 /**
+ * 無効化パターンをストレージから読み込む
+ * @returns {Promise<string[]>}
+ */
+async function loadDisabledPatterns() {
+  try {
+    const data = await browser.storage.local.get("disabledPatterns");
+    return data.disabledPatterns ?? [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * ホスト名(+パス)がパターンに一致するか判定
+ * パターンに "/" が含まれる場合は hostname+pathname でマッチ、
+ * 含まれない場合は hostname のみでマッチ
+ * @param {string} hostname
+ * @param {string} pathname
+ * @param {string} pattern
+ * @returns {boolean}
+ */
+function matchesPattern(hostname, pathname, pattern) {
+  const trimmed = pattern.trim();
+  if (!trimmed) return false;
+  const target = trimmed.includes("/") ? hostname + pathname : hostname;
+  const escaped = trimmed.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
+  try {
+    return new RegExp(`^${escaped}$`, "i").test(target);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 現在のサイトが無効化されているか判定
+ * @param {string[]} patterns
+ * @returns {boolean}
+ */
+function isSiteDisabled(patterns) {
+  const hostname = location.hostname;
+  if (!hostname) return false;
+  const pathname = location.pathname;
+  return patterns.some(p => matchesPattern(hostname, pathname, p));
+}
+
+/**
  * ストレージ変更時の設定更新
  * @param {Object} changes
  * @param {string} area
@@ -612,6 +658,10 @@ function setupFrameListeners(tagName) {
  * @returns {Promise<void>}
  */
 async function initialize() {
+  // サイトが無効化されているか確認
+  const disabledPatterns = await loadDisabledPatterns();
+  if (isSiteDisabled(disabledPatterns)) return;
+
   // 設定の読み込み
   await loadSettings();
 

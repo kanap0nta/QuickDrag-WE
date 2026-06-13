@@ -19,6 +19,11 @@ const TRANSLATIONS = Object.freeze({
     tab_open_last: "Last",
     tab_open_first: "First",
     auto_save_notice: "Settings are saved automatically",
+    site_enabled_label: " Enable on this site",
+    reload_notice: "Reload the page to apply changes",
+    reload_button: "Reload",
+    patterns_title: "Disabled site patterns",
+    patterns_help: "One pattern per line. Use * as wildcard. Without / → hostname match (example.com). With / → path match (example.com/path/*)",
   },
   "zh-CN": {
     setting_title: "QuickDrag 选项",
@@ -271,6 +276,11 @@ const TRANSLATIONS = Object.freeze({
     tab_open_last: "最後",
     tab_open_first: "先頭",
     auto_save_notice: "設定は自動的に保存されます",
+    site_enabled_label: " このサイトで有効にする",
+    reload_notice: "変更を反映するにはページをリロードしてください",
+    reload_button: "リロード",
+    patterns_title: "無効サイトのパターン",
+    patterns_help: "1行につき1パターン。*はワイルドカード。/ なし→ホスト名マッチ (example.com)、/ あり→パスマッチ (example.com/path/*)",
   },
 });
 
@@ -294,6 +304,11 @@ const ELEMENT_MAPPINGS = Object.freeze({
     "tab-open-last": "tab_open_last",
     "tab-open-first": "tab_open_first",
     "auto-save-notice": "auto_save_notice",
+    "site-enabled-label": "site_enabled_label",
+    "reload-notice-text": "reload_notice",
+    "reload-button": "reload_button",
+    "patterns-title": "patterns_title",
+    "patterns-help": "patterns_help",
   },
 });
 
@@ -347,11 +362,13 @@ function findBestTranslation(languages) {
  * @param {Object} translation
  */
 function applyTranslation(translation) {
+  const fallback = TRANSLATIONS[DEFAULT_LANGUAGE];
   // textContent を設定する要素
   for (const [elementId, translationKey] of Object.entries(ELEMENT_MAPPINGS.textContent)) {
     const element = document.getElementById(elementId);
-    if (element && translation[translationKey]) {
-      element.textContent = translation[translationKey];
+    if (element) {
+      const text = translation[translationKey] ?? fallback[translationKey] ?? "";
+      if (text) element.textContent = text;
     }
   }
 }
