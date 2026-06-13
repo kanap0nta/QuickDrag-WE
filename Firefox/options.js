@@ -24,25 +24,27 @@ const STORAGE_KEYS = [
   "checkboxArray",
 ];
 
+const SITE_STORAGE_KEY = "disabledPatterns";
+
 // ========================================
 // DOM要素の取得
 // ========================================
 const elements = {
-  get engine() {
-    return document.querySelector("#engine");
-  },
-  get url() {
-    return document.querySelector('[name="url"]');
-  },
-  get tab() {
-    return document.querySelector("#tab");
-  },
-  get checkboxes() {
-    return document.querySelectorAll(".data-types [type=checkbox]");
-  },
-  get saveButton() {
-    return document.querySelector("#save-button");
-  },
+  get engine() { return document.querySelector("#engine"); },
+  get url() { return document.querySelector('[name="url"]'); },
+  get tab() { return document.querySelector("#tab"); },
+  get checkboxes() { return document.querySelectorAll(".data-types [type=checkbox]"); },
+  get saveButton() { return document.querySelector("#save-button"); },
+  get siteSection() { return document.querySelector("#site-section"); },
+  get siteEnabled() { return document.querySelector("#site-enabled"); },
+  get currentHostnameEl() { return document.querySelector("#current-hostname"); },
+  get reloadNotice() { return document.querySelector("#reload-notice"); },
+  get reloadButton() { return document.querySelector("#reload-button"); },
+  get patternsHeader() { return document.querySelector("#patterns-header"); },
+  get patternsArrow() { return document.querySelector("#patterns-arrow"); },
+  get patternsContent() { return document.querySelector("#patterns-content"); },
+  get patternsTextarea() { return document.querySelector("#patterns-textarea"); },
+  get mainOptions() { return document.querySelector("#main-options"); },
 };
 
 // ========================================
@@ -73,6 +75,57 @@ async function loadSettings() {
     console.error("Failed to load settings:", error);
     return {};
   }
+}
+
+// ========================================
+// サイト無効化設定
+// ========================================
+
+let currentTabId = null;
+let currentHostname = null;
+let currentPathname = null;
+let disabledPatterns = [];
+let initialSiteEnabled = true;
+let pageLoadedEnabled = null;
+
+async function loadDisabledPatterns() {
+  try {
+    const data = await browser.storage.local.get(SITE_STORAGE_KEY);
+    return data[SITE_STORAGE_KEY] ?? [];
+  } catch {
+    return [];
+  }
+}
+
+async function saveDisabledPatterns(patterns) {
+  try {
+    await browser.storage.local.set({ [SITE_STORAGE_KEY]: patterns });
+  } catch (error) {
+    console.error("Failed to save disabled patterns:", error);
+  }
+}
+
+function matchesPattern(hostname, pathname, pattern) {
+  const trimmed = pattern.trim();
+  if (!trimmed) return false;
+  const target = trimmed.includes("/") ? hostname + pathname : hostname;
+  const escaped = trimmed.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
+  try {
+    return new RegExp(`^${escaped}$`, "i").test(target);
+  } catch {
+    return false;
+  }
+}
+
+function isSiteDisabled(hostname, pathname, patterns) {
+  return patterns.some(p => matchesPattern(hostname, pathname, p));
+}
+
+function updateSiteUI(patterns) {
+  if (!currentHostname) return;
+  const nowDisabled = isSiteDisabled(currentHostname, currentPathname, patterns);
+  elements.siteEnabled.checked = !nowDisabled;
+  elements.mainOptions.hidden = nowDisabled;
 }
 
 // ========================================
@@ -195,6 +248,66 @@ function debounce(func, wait) {
   };
 }
 
+/**
+ * サイト有効/無効トグルのハンドラ
+ */
+async function handleSiteToggle() {
+  if (!currentHostname) return;
+  const enabled = elements.siteEnabled.checked;
+  if (!enabled) {
+    if (!isSiteDisabled(currentHostname, currentPathname, disabledPatterns)) {
+      const pattern = currentPathname !== "/" ? currentHostname + currentPathname : currentHostname;
+      disabledPatterns.push(pattern);
+    }
+    // パターンセクションを展開
+    elements.patternsContent.hidden = false;
+    elements.patternsArrow.textContent = "▼";
+  } else {
+    disabledPatterns = disabledPatterns.filter(p => !matchesPattern(currentHostname, currentPathname, p));
+    // パターンセクションを折りたたむ
+    elements.patternsContent.hidden = true;
+    elements.patternsArrow.textContent = "▶";
+  }
+  await saveDisabledPatterns(disabledPatterns);
+  elements.patternsTextarea.value = disabledPatterns.join("\n");
+  elements.mainOptions.hidden = !enabled;
+  const reloadNeeded = pageLoadedEnabled !== null
+    ? enabled !== pageLoadedEnabled
+    : enabled !== initialSiteEnabled;
+  elements.reloadNotice.hidden = !reloadNeeded;
+}
+
+/**
+ * パターンテキストエリア変更のハンドラ
+ */
+async function handlePatternsChange() {
+  const text = elements.patternsTextarea.value;
+  disabledPatterns = text.split("\n").map(l => l.trim()).filter(l => l);
+  await saveDisabledPatterns(disabledPatterns);
+  updateSiteUI(disabledPatterns);
+}
+
+/**
+ * リロードボタンのハンドラ
+ */
+async function handleReloadButton() {
+  if (currentTabId !== null) {
+    try {
+      await browser.tabs.reload(currentTabId);
+    } catch { /* ignore */ }
+  }
+  window.close();
+}
+
+/**
+ * パターンセクションの展開/折りたたみ
+ */
+function handlePatternsToggle() {
+  const content = elements.patternsContent;
+  content.hidden = !content.hidden;
+  elements.patternsArrow.textContent = content.hidden ? "▶" : "▼";
+}
+
 // ========================================
 // イベントリスナーの設定
 // ========================================
@@ -217,6 +330,26 @@ function setupEventListeners() {
   for (const checkbox of elements.checkboxes) {
     checkbox.addEventListener("change", handleSettingChange);
   }
+
+  // サイトトグル
+  elements.siteEnabled.addEventListener("change", handleSiteToggle);
+
+  // パターンセクション展開
+  elements.patternsHeader.addEventListener("click", handlePatternsToggle);
+  elements.patternsHeader.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handlePatternsToggle();
+    }
+  });
+
+  // パターンテキストエリア（入力中は遅延保存）
+  const debouncedPatternsChange = debounce(handlePatternsChange, 500);
+  elements.patternsTextarea.addEventListener("input", debouncedPatternsChange);
+  elements.patternsTextarea.addEventListener("change", handlePatternsChange);
+
+  // リロードボタン
+  elements.reloadButton.addEventListener("click", handleReloadButton);
 }
 
 // ========================================
@@ -227,6 +360,47 @@ function setupEventListeners() {
  * 初期化処理
  */
 async function initialize() {
+  // 無効化パターンを読み込む
+  disabledPatterns = await loadDisabledPatterns();
+  elements.patternsTextarea.value = disabledPatterns.join("\n");
+
+  // 現在のタブ情報を取得してサイトトグルを設定
+  try {
+    const tabs = await browser.tabs.query({ active: true, currentWindow: true });
+    const tab = tabs[0];
+    if (tab?.url) {
+      const url = new URL(tab.url);
+      if (url.protocol === "http:" || url.protocol === "https:" || url.protocol === "file:") {
+        currentHostname = url.hostname;
+        currentPathname = url.pathname;
+        currentTabId = tab.id;
+        const displayPath = currentPathname !== "/" ? currentHostname + currentPathname : currentHostname;
+        elements.currentHostnameEl.textContent = displayPath;
+        const siteDisabled = isSiteDisabled(currentHostname, currentPathname, disabledPatterns);
+        initialSiteEnabled = !siteDisabled;
+        elements.siteEnabled.checked = initialSiteEnabled;
+        elements.mainOptions.hidden = siteDisabled;
+        if (siteDisabled) {
+          elements.patternsContent.hidden = false;
+          elements.patternsArrow.textContent = "▼";
+        }
+        try {
+          const result = await browser.runtime.sendMessage({ type: "getPageLoadedState", tabId: currentTabId });
+          pageLoadedEnabled = result?.enabled ?? null;
+        } catch {}
+        if (pageLoadedEnabled !== null && pageLoadedEnabled !== initialSiteEnabled) {
+          elements.reloadNotice.hidden = false;
+        }
+      } else {
+        elements.siteSection.hidden = true;
+      }
+    } else {
+      elements.siteSection.hidden = true;
+    }
+  } catch {
+    elements.siteSection.hidden = true;
+  }
+
   const settings = await loadSettings();
   updateUI(settings);
   setupEventListeners();
