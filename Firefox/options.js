@@ -10,8 +10,8 @@ const DEFAULTS = Object.freeze({
   SEARCH_ENGINE_URL: "https://www.google.com/search?q=",
   TAB_POSITION: "right",
   CHECKBOX_ARRAY: [
-    "is_address_forground",
-    "is_search_forground",
+    "is_address_foreground",
+    "is_search_foreground",
     "is_save_image",
     "is_prefer_save_image",
   ],
@@ -162,17 +162,6 @@ function getCheckedTypes() {
  * @param {Object} settings
  */
 function updateUI(settings) {
-  // ドキュメントが存在しない場合（インストール時など）はデフォルト値を保存
-  if (typeof document === "undefined") {
-    saveSettings({
-      searchEngine: DEFAULTS.SEARCH_ENGINE,
-      searchEngineURL: DEFAULTS.SEARCH_ENGINE_URL,
-      tabPosition: DEFAULTS.TAB_POSITION,
-      checkboxArray: DEFAULTS.CHECKBOX_ARRAY,
-    });
-    return;
-  }
-
   // 検索エンジン
   elements.engine.value = settings.searchEngine ?? DEFAULTS.SEARCH_ENGINE;
 
@@ -236,7 +225,7 @@ const handleUrlInput = debounce(() => {
  */
 function debounce(func, wait) {
   let timeoutId = null;
-  return (...args) => {
+  return function(...args) {
     clearTimeout(timeoutId);
     timeoutId = setTimeout(() => func.apply(this, args), wait);
   };
@@ -368,9 +357,21 @@ async function initialize() {
     elements.siteSection.hidden = true;
   }
 
+  await migrateCheckboxArray();
   const settings = await loadSettings();
   updateUI(settings);
   setupEventListeners();
+}
+
+async function migrateCheckboxArray() {
+  const data = await browser.storage.local.get("checkboxArray");
+  const arr = data.checkboxArray;
+  if (!Array.isArray(arr)) return;
+  const renamed = { is_address_forground: "is_address_foreground", is_search_forground: "is_search_foreground" };
+  const migrated = arr.map(k => renamed[k] ?? k);
+  if (migrated.some((k, i) => k !== arr[i])) {
+    await browser.storage.local.set({ checkboxArray: migrated });
+  }
 }
 
 // DOMContentLoaded時に初期化

@@ -47,8 +47,7 @@ async function handleMessage(request, sender, sendResponse) {
           if (urlObj.protocol !== "http:" && urlObj.protocol !== "https:" && urlObj.protocol !== "file:") {
             sendResponse({ disabled: false }); break;
           }
-          const data = await browser.storage.local.get("disabledPatterns");
-          const patterns = data.disabledPatterns ?? [];
+          const patterns = await getDisabledPatterns();
           sendResponse({ disabled: isSiteDisabled(urlObj.hostname, urlObj.pathname, patterns) });
         } catch {
           sendResponse({ disabled: false });
@@ -134,7 +133,7 @@ async function searchURL(request, sender) {
   const createOptions = {
     url: request.value,
     cookieStoreId: sender.tab?.cookieStoreId,
-    active: request.isforground,
+    active: request.isForeground,
   };
 
   // undefinedでない場合のみ追加
@@ -205,6 +204,15 @@ async function downloadImage(request) {
 // パターンマッチング
 // ========================================
 
+let cachedDisabledPatterns = null;
+
+async function getDisabledPatterns() {
+  if (cachedDisabledPatterns !== null) return cachedDisabledPatterns;
+  const data = await browser.storage.local.get("disabledPatterns");
+  cachedDisabledPatterns = data.disabledPatterns ?? [];
+  return cachedDisabledPatterns;
+}
+
 function matchesPattern(hostname, pathname, pattern) {
   const trimmed = pattern.trim();
   if (!trimmed) return false;
@@ -259,8 +267,7 @@ async function updateTabIcon(tabId, url) {
   try {
     const urlObj = new URL(url);
     if (urlObj.protocol !== "http:" && urlObj.protocol !== "https:" && urlObj.protocol !== "file:") return;
-    const data = await browser.storage.local.get("disabledPatterns");
-    const patterns = data.disabledPatterns ?? [];
+    const patterns = await getDisabledPatterns();
     const disabled = isSiteDisabled(urlObj.hostname, urlObj.pathname, patterns);
     if (disabled) {
       await browser.action.setIcon({ imageData: await getDisabledIconData(), tabId });
@@ -289,6 +296,7 @@ browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 
 browser.storage.onChanged.addListener(async (changes, area) => {
   if (area !== "local" || !changes.disabledPatterns) return;
+  cachedDisabledPatterns = changes.disabledPatterns.newValue ?? [];
   const tabs = await browser.tabs.query({});
   for (const tab of tabs) {
     await updateTabIcon(tab.id, tab.url);
