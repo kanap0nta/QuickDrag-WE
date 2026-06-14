@@ -232,6 +232,7 @@ function broadcastToFrames(tagName, message) {
 function handleMessage(event) {
   const { data } = event;
   if (data?.message_addon === MESSAGE_TYPE.SET_STR) {
+    console.log(`[QD] handleMessage: state received selectStr="${data.SelectStr}"`);
     Object.assign(state, {
       selectStr: data.SelectStr,
       isImage: data.IsImage,
@@ -249,6 +250,7 @@ function handleMessage(event) {
  * @returns {Promise<void>}
  */
 async function sendToBackground(type, value, isForeground) {
+  console.log(`[QD] sendToBackground: type=${type} value="${value}" isForeground=${isForeground} tab=${settings.newTabPosition}`);
   try {
     await chrome.runtime.sendMessage({
       type,
@@ -256,8 +258,9 @@ async function sendToBackground(type, value, isForeground) {
       isForeground: isForeground,
       tab: settings.newTabPosition,
     });
+    console.log(`[QD] sendToBackground: done type=${type}`);
   } catch (error) {
-    console.error("Failed to send message to background:", error);
+    console.error("[QD] sendToBackground failed:", error);
   }
 }
 
@@ -294,6 +297,70 @@ function findFirstLinkParent(node) {
     }
   }
   return null;
+}
+
+/**
+ * ドラッグ中、iframe 上に透明オーバーレイを生成する（トップフレームのみ）
+ * オーバーレイが drop を受け取ることで、クロスオリジン iframe の制限を回避する
+ */
+function createIframeOverlays() {
+  if (window !== window.top) return;
+  const iframes = document.querySelectorAll("iframe, frame");
+  console.log(`[QD] createIframeOverlays: found ${iframes.length} iframe(s)`);
+  for (const el of iframes) {
+    const rect = el.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) {
+      console.log(`[QD] createIframeOverlays: skipping zero-size iframe`, el.src || el.name);
+      continue;
+    }
+    const overlay = document.createElement("div");
+    overlay.dataset.quickdragOverlay = "1";
+    // rgba(0,0,0,0.001) は完全透明だと一部ブラウザでイベントを受け取れない場合があるため使用
+    overlay.style.cssText =
+      `position:fixed;top:${rect.top}px;left:${rect.left}px;` +
+      `width:${rect.width}px;height:${rect.height}px;` +
+      `z-index:2147483647;background:rgba(0,0,0,0.001);pointer-events:all;`;
+
+    // document バブリングに依存せず要素に直接リスナーを追加
+    overlay.addEventListener("dragenter", (e) => {
+      _isOverOverlay = true;
+      _lastOverlayKeyState = { shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, altKey: e.altKey };
+      console.log("[QD] overlay dragenter effectAllowed=", e.dataTransfer?.effectAllowed);
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+    }, false);
+    overlay.addEventListener("dragover", (e) => {
+      _isOverOverlay = true;
+      _lastOverlayKeyState = { shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, altKey: e.altKey };
+      console.log("[QD] overlay dragover effectAllowed=", e.dataTransfer?.effectAllowed, "dropEffect=", e.dataTransfer?.dropEffect);
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+    }, false);
+    overlay.addEventListener("dragleave", (e) => {
+      _isOverOverlay = false;
+      console.log("[QD] overlay dragleave");
+    }, false);
+    overlay.addEventListener("drop", (e) => {
+      console.log("[QD] overlay drop! selectStr=", state.selectStr);
+      _isOverOverlay = false;
+      e.stopPropagation();
+      handleDrop(e);
+    }, false);
+
+    document.body.appendChild(overlay);
+    console.log(`[QD] createIframeOverlays: overlay created top=${rect.top} left=${rect.left} w=${rect.width} h=${rect.height}`);
+  }
+}
+
+/**
+ * iframe オーバーレイを除去する
+ */
+function removeIframeOverlays() {
+  for (const el of document.querySelectorAll("[data-quickdrag-overlay]")) {
+    el.remove();
+  }
 }
 
 /**
@@ -340,6 +407,99 @@ function preventDefault(event) {
 }
 
 /**
+ * ドラッグ終了時の処理（ドロップされずキャンセルされた場合もオーバーレイを除去）
+ * @param {DragEvent} event
+ */
+async function handleDragEnd(event) {
+  const dropEffect = event.dataTransfer?.dropEffect ?? "unknown";
+  console.log(`[QD] dragend fired dropEffect=${dropEffect} isOverOverlay=${_isOverOverlay} selectStr="${state.selectStr}"`);
+
+  // Chrome は iframe 上のオーバーレイに drop を発火しないことがある。
+  // dragend 時に isOverOverlay が true かつ selectStr が存在すれば意図的なドロップとみなして実行する。
+  if (_isOverOverlay && state.selectStr && _lastOverlayKeyState) {
+    console.log("[QD] dragend: overlay workaround → performing action");
+    const keyState = _lastOverlayKeyState;
+    const fakeEvent = {
+      target: { nodeName: "DIV", dataset: { quickdragOverlay: "1" } },
+      shiftKey: keyState.shiftKey,
+      ctrlKey: keyState.ctrlKey,
+      altKey: keyState.altKey,
+      dataTransfer: { items: [], getData: () => "" },
+      preventDefault: () => {},
+    };
+    _isOverOverlay = false;
+    _lastOverlayKeyState = null;
+    handleDrop(fakeEvent);
+    return;
+  }
+
+  _isOverOverlay = false;
+  _lastOverlayKeyState = null;
+  removeIframeOverlays();
+  preventDefault(event);
+
+  // top→iframe workaround（dragleave が dragend より先に発火し _isOverOverlay がリセットされた場合の補完）。
+  // handleDrop が正常に実行されると resetState() で selectStr が空になる。
+  // dragend 時点で selectStr が残っている = drop が JS に届かず Chrome が iframe に横取りした = 処理が必要。
+  // dropEffect=copy はドロップが受け入れられたことを示す（Escape/範囲外は "none" になる）。
+  if (window === window.top && dropEffect === "copy" && state.selectStr && !event.shiftKey) {
+    console.log("[QD] dragend: top→iframe Chrome-intercepted drop workaround → performing action");
+    const { ctrlKey, altKey, shiftKey } = event;
+    const fakeEvent = {
+      target: { nodeName: "DIV", dataset: { quickdragOverlay: "1" } },
+      shiftKey,
+      ctrlKey,
+      altKey,
+      dataTransfer: { items: [], getData: () => "" },
+      preventDefault: () => {},
+    };
+    handleDrop(fakeEvent);
+    return;
+  }
+
+  // iframe でドラッグし、フレーム間デッドゾーン（iframe 境界付近）で release した場合の workaround。
+  // dropEffect=none になるが Escape キャンセルでなければ意図的なドロップとみなして実行する。
+  if (window !== window.top && dropEffect === "none" && state.selectStr && !_escapePressed && !event.shiftKey) {
+    console.log("[QD] dragend: iframe dead-zone drop workaround → performing action");
+    const { ctrlKey, altKey, shiftKey } = event;
+    const fakeEvent = {
+      target: { nodeName: "BODY", dataset: {} },
+      shiftKey,
+      ctrlKey,
+      altKey,
+      dataTransfer: { items: [], getData: () => "" },
+      preventDefault: () => {},
+    };
+    handleDrop(fakeEvent);
+    return;
+  }
+
+  // iframe 内での drop が content script に届かない場合の workaround。
+  // Chrome がブラウザレベルで処理して dropEffect=copy になるが drop イベントが来ない。
+  // 50ms 待ってトップフレームが state をリセット済みかを確認し、残っていれば自身で処理する。
+  // _dragSeq で「待機中に新ドラッグが始まっていないか」を確認し race condition を防ぐ。
+  if (window !== window.top && dropEffect === "copy" && state.selectStr) {
+    const capturedSeq = _dragSeq;
+    const { ctrlKey, altKey, shiftKey } = event;
+    await new Promise(resolve => setTimeout(resolve, 50));
+    if (_dragSeq !== capturedSeq) {
+      console.log(`[QD] dragend: new drag started during wait (seq ${capturedSeq}→${_dragSeq}), skipping workaround`);
+    } else if (state.selectStr) {
+      console.log("[QD] dragend: intra-iframe drop workaround → performing action");
+      const fakeEvent = {
+        target: { nodeName: "BODY", dataset: {} },
+        shiftKey,
+        ctrlKey,
+        altKey,
+        dataTransfer: { items: [], getData: () => "" },
+        preventDefault: () => {},
+      };
+      handleDrop(fakeEvent);
+    }
+  }
+}
+
+/**
  * ドラッグ開始時の処理
  * @param {DragEvent} event
  */
@@ -353,10 +513,36 @@ function handleDragStart(event) {
     !(event.target instanceof HTMLTextAreaElement) &&
     !(event.target instanceof HTMLInputElement);
 
+  _iframeDragoverNotified = false;
+  _escapePressed = false;
+  _dragSeq++;
+  console.log(`[QD] dragstart: frame=${window === window.top ? "top" : "iframe"} target=${event.target?.nodeName} isHTMLElement=${isHTMLElement} seq=${_dragSeq}`);
+
   if (isHTMLElement) {
     processDragFromElement(event);
   } else {
     processDragFromText(event);
+  }
+
+  console.log(`[QD] dragstart: selectStr="${state.selectStr}" isImage=${state.isImage}`);
+  createIframeOverlays();
+
+  // iframe 内で drop が発火したとき用にバックグラウンドへ状態を保存
+  if (state.selectStr) {
+    chrome.runtime.sendMessage({
+      type: "setDragState",
+      state: {
+        selectStr: state.selectStr,
+        isImage: state.isImage,
+        isBase64: state.isBase64,
+        isAddressSearch: state.isAddressSearch,
+      },
+    }).catch(() => {});
+  }
+
+  // iframe 内で dragstart したことをトップフレームに通知（デバッグ用）
+  if (window !== window.top) {
+    try { window.top.postMessage({ __qdDebug: "dragstart", selectStr: state.selectStr }, "*"); } catch (e) {}
   }
 }
 
@@ -443,8 +629,28 @@ function processDragFromText(event) {
  * ドラッグオーバー時の処理
  * @param {DragEvent} event
  */
+let _lastDragOverTarget = null;
+let _iframeDragoverNotified = false;
+let _isOverOverlay = false;
+let _lastOverlayKeyState = null;
+let _dragSeq = 0;      // ドラッグごとに増加。50ms 待機中に新ドラッグが始まったことを検出するため
+let _escapePressed = false; // Escape でキャンセルされた場合は true（ dead-zone workaround をスキップするため）
 function handleDragOver(event) {
   const targetNodeName = event.target.nodeName.toUpperCase();
+  const isOverlay = !!event.target.dataset?.quickdragOverlay;
+  const isIframe = window !== window.top;
+
+  // ターゲットが変わったときだけログ出力（連続発火を抑制）
+  if (event.target !== _lastDragOverTarget) {
+    _lastDragOverTarget = event.target;
+    console.log(`[QD] dragover: frame=${isIframe ? "iframe" : "top"} target=${targetNodeName} isOverlay=${isOverlay} defaultPrevented=${event.defaultPrevented}`);
+  }
+
+  // iframe 内の dragover 発火をトップフレームに通知（最初の1回のみ）
+  if (isIframe && !_iframeDragoverNotified) {
+    _iframeDragoverNotified = true;
+    try { window.top.postMessage({ __qdDebug: "dragover", target: targetNodeName }, "*"); } catch (e) {}
+  }
 
   if (targetNodeName === "INPUT" || targetNodeName === "TEXTAREA" || event.shiftKey) {
     return;
@@ -457,15 +663,29 @@ function handleDragOver(event) {
  * ドロップ時の処理
  * @param {DragEvent} event
  */
-function handleDrop(event) {
+async function handleDrop(event) {
+  _isOverOverlay = false;
+  _lastOverlayKeyState = null;
+  removeIframeOverlays();
+
   const targetNodeName = event.target.nodeName.toUpperCase();
+  const isOverlay = !!event.target.dataset?.quickdragOverlay;
+  const frame = window === window.top ? "top" : "iframe";
+  console.log(`[QD] drop: frame=${frame} target=${targetNodeName} isOverlay=${isOverlay} selectStr="${state.selectStr}"`);
+
+  // iframe 内での発火をトップフレームに通知（デバッグ用）
+  if (window !== window.top) {
+    try { window.top.postMessage({ __qdDebug: "drop", selectStr: state.selectStr, target: targetNodeName }, "*"); } catch (e) {}
+  }
 
   // 入力フィールドへのドロップまたはShiftキー押下時は何もしない
   if (targetNodeName === "INPUT" || targetNodeName === "TEXTAREA" || event.shiftKey) {
+    console.log("[QD] drop: skipped (input/textarea/shift)");
     resetState();
     return;
   }
 
+  // await より前に同期的に呼ぶ必要がある
   preventDefault(event);
 
   // ファイルドロップの検出
@@ -474,12 +694,25 @@ function handleDrop(event) {
       (item) => item.kind === "file" && state.selectStr === ""
     );
     if (hasFile) {
+      console.log("[QD] drop: skipped (file drop)");
       resetState();
       return;
     }
   }
 
+  // iframe 内で drop が発火した場合、state が空なのでバックグラウンドから取得
   if (state.selectStr === "") {
+    try {
+      const bgState = await chrome.runtime.sendMessage({ type: "getDragState" });
+      console.log("[QD] drop: background state =", bgState);
+      if (bgState?.selectStr) Object.assign(state, bgState);
+    } catch (e) {
+      console.log("[QD] drop: background fallback error", e);
+    }
+  }
+
+  if (state.selectStr === "") {
+    console.log("[QD] drop: skipped (selectStr empty after all fallbacks)");
     resetState();
     return;
   }
@@ -487,6 +720,7 @@ function handleDrop(event) {
   if (state.isImage) {
     handleImageDrop(event);
   } else {
+    console.log(`[QD] handleLinkDrop: url="${state.selectStr}" ctrlKey=${event.ctrlKey} altKey=${event.altKey}`);
     handleLinkDrop(event);
   }
 
@@ -649,14 +883,21 @@ async function handleStorageChange(changes, area) {
  * ドラッグ機能を有効化
  * @returns {Promise<void>}
  */
+function handleKeyDown(e) {
+  if (e.key === "Escape") _escapePressed = true;
+}
+
 async function activate() {
   if (isActive) return;
   isActive = true;
   await loadSettings();
   document.addEventListener("dragstart", handleDragStart, false);
-  document.addEventListener("dragover", handleDragOver, false);
-  document.addEventListener("dragend", preventDefault, false);
-  document.addEventListener("drop", handleDrop, false);
+  // dragover/drop はキャプチャフェーズ：ページの stopPropagation より先に発火し、
+  // preventDefault を確実に呼べるため dropEffect=none になるのを防ぐ
+  document.addEventListener("dragover", handleDragOver, true);
+  document.addEventListener("dragend", handleDragEnd, false);
+  document.addEventListener("drop", handleDrop, true);
+  document.addEventListener("keydown", handleKeyDown, true);
   window.addEventListener("message", handleMessage, false);
 }
 
@@ -667,9 +908,11 @@ function deactivate() {
   if (!isActive) return;
   isActive = false;
   document.removeEventListener("dragstart", handleDragStart, false);
-  document.removeEventListener("dragover", handleDragOver, false);
-  document.removeEventListener("dragend", preventDefault, false);
-  document.removeEventListener("drop", handleDrop, false);
+  document.removeEventListener("dragover", handleDragOver, true);
+  document.removeEventListener("dragend", handleDragEnd, false);
+  document.removeEventListener("drop", handleDrop, true);
+  document.removeEventListener("keydown", handleKeyDown, true);
+  removeIframeOverlays();
   window.removeEventListener("message", handleMessage, false);
 }
 
@@ -682,6 +925,15 @@ async function initialize() {
 
   // トップフレームのみ SPA ナビゲーションを監視（popstate/hashchange/pushState）
   if (window === window.top) {
+    // iframe からのデバッグ通知を受け取る
+    window.addEventListener("message", (e) => {
+      if (e.data?.__qdDebug === "init")         console.log(`[QD] ★ iframe content script 起動: ${e.data.href}`);
+      if (e.data?.__qdDebug === "dragstart")   console.log(`[QD] ★ iframe dragstart! selectStr="${e.data.selectStr}"`);
+      if (e.data?.__qdDebug === "dragover")    console.log(`[QD] ★ iframe dragover 発火! target=${e.data.target}`);
+      if (e.data?.__qdDebug === "drop")        console.log(`[QD] ★ iframe handleDrop 発火! selectStr="${e.data.selectStr}" target=${e.data.target}`);
+      if (e.data?.__qdDebug === "capture-drop") console.log(`[QD] ★ iframe CAPTURE drop 発火! target=${e.data.target}`);
+    }, false);
+
     window.addEventListener("popstate", handleNavigation, false);
     window.addEventListener("hashchange", handleNavigation, false);
     const origPushState = history.pushState.bind(history);
@@ -698,6 +950,11 @@ async function initialize() {
 
   if (!await checkDisabled()) {
     await activate();
+  }
+
+  // iframe 内で起動したことをトップフレームに通知（デバッグ用）
+  if (window !== window.top) {
+    try { window.top.postMessage({ __qdDebug: "init", href: location.href }, "*"); } catch (e) {}
   }
 }
 

@@ -2,6 +2,9 @@
 
 (() => {
 
+// フレーム間ドラッグ状態の一時保管
+let dragState = null;
+
 // ========================================
 // メッセージハンドラ
 // ========================================
@@ -23,6 +26,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 async function handleMessage(request, sender, sendResponse) {
   try {
     switch (request.type) {
+      case "setDragState":
+        dragState = request.state ?? null;
+        sendResponse({ ok: true });
+        break;
+
+      case "getDragState":
+        sendResponse(dragState);
+        dragState = null;
+        break;
+
       case "searchURL":
         await searchURL(request, sender);
         sendResponse({ success: true, message: `searchURL: ${request.value}` });
