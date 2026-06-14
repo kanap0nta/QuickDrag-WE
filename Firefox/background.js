@@ -33,6 +33,29 @@ async function handleMessage(request, sender, sendResponse) {
         sendResponse({ success: true, message: `downloadImage: ${request.value}` });
         break;
 
+      case "checkDisabled": {
+        const tabId = sender.tab?.id;
+        if (tabId === undefined) {
+          sendResponse({ disabled: false });
+          break;
+        }
+        try {
+          const tab = await browser.tabs.get(tabId);
+          const tabUrl = tab.url;
+          if (!tabUrl) { sendResponse({ disabled: false }); break; }
+          const urlObj = new URL(tabUrl);
+          if (urlObj.protocol !== "http:" && urlObj.protocol !== "https:" && urlObj.protocol !== "file:") {
+            sendResponse({ disabled: false }); break;
+          }
+          const data = await browser.storage.local.get("disabledPatterns");
+          const patterns = data.disabledPatterns ?? [];
+          sendResponse({ disabled: isSiteDisabled(urlObj.hostname, urlObj.pathname, patterns) });
+        } catch {
+          sendResponse({ disabled: false });
+        }
+        break;
+      }
+
       default:
         sendResponse({ success: false, message: "Unknown message type" });
         break;

@@ -564,49 +564,28 @@ async function loadSettings() {
 }
 
 /**
- * 無効化パターンをストレージから読み込む
- * @returns {Promise<string[]>}
+ * バックグラウンドに現在のタブが無効化されているか問い合わせる
+ * iframe内でも常にタブのトップレベルURLで判定される
+ * @returns {Promise<boolean>}
  */
-async function loadDisabledPatterns() {
+async function checkDisabled() {
   try {
-    const data = await browser.storage.local.get("disabledPatterns");
-    return data.disabledPatterns ?? [];
-  } catch {
-    return [];
-  }
-}
-
-/**
- * ホスト名(+パス)がパターンに一致するか判定
- * パターンに "/" が含まれる場合は hostname+pathname でマッチ、
- * 含まれない場合は hostname のみでマッチ
- * @param {string} hostname
- * @param {string} pathname
- * @param {string} pattern
- * @returns {boolean}
- */
-function matchesPattern(hostname, pathname, pattern) {
-  const trimmed = pattern.trim();
-  if (!trimmed) return false;
-  const target = trimmed.includes("/") ? hostname + pathname : hostname;
-  const escaped = trimmed.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
-  try {
-    return new RegExp(`^${escaped}$`, "i").test(target);
+    const response = await browser.runtime.sendMessage({ type: "checkDisabled" });
+    return response?.disabled ?? false;
   } catch {
     return false;
   }
 }
 
 /**
- * 現在のサイトが無効化されているか判定
- * @param {string[]} patterns
- * @returns {boolean}
+ * SPA ナビゲーション後に有効化/無効化を再判定
  */
-function isSiteDisabled(patterns) {
-  const hostname = location.hostname;
-  if (!hostname) return false;
-  const pathname = location.pathname;
-  return patterns.some(p => matchesPattern(hostname, pathname, p));
+async function handleNavigation() {
+  if (await checkDisabled()) {
+    deactivate();
+  } else {
+    await activate();
+  }
 }
 
 /**
@@ -618,8 +597,7 @@ async function handleStorageChange(changes, area) {
   if (area !== "local") return;
 
   if (changes.disabledPatterns !== undefined) {
-    const patterns = changes.disabledPatterns.newValue ?? [];
-    if (isSiteDisabled(patterns)) {
+    if (await checkDisabled()) {
       deactivate();
     } else {
       await activate();
@@ -702,11 +680,25 @@ function deactivate() {
  * @returns {Promise<void>}
  */
 async function initialize() {
-  // ストレージ変更を常に監視（サイト無効時でも有効化に対応するため）
   browser.storage.onChanged.addListener(handleStorageChange);
 
-  const disabledPatterns = await loadDisabledPatterns();
-  if (!isSiteDisabled(disabledPatterns)) {
+  // トップフレームのみ SPA ナビゲーションを監視（popstate/hashchange/pushState）
+  if (window === window.top) {
+    window.addEventListener("popstate", handleNavigation, false);
+    window.addEventListener("hashchange", handleNavigation, false);
+    const origPushState = history.pushState.bind(history);
+    const origReplaceState = history.replaceState.bind(history);
+    history.pushState = function (...args) {
+      origPushState(...args);
+      handleNavigation();
+    };
+    history.replaceState = function (...args) {
+      origReplaceState(...args);
+      handleNavigation();
+    };
+  }
+
+  if (!await checkDisabled()) {
     await activate();
   }
 }
