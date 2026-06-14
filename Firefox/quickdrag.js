@@ -38,6 +38,8 @@ const settings = {
   isPreferSaveImage: DEFAULTS.IS_PREFER_SAVE_IMAGE,
 };
 
+let isActive = false;
+
 // ========================================
 // 正規表現パターン
 // ========================================
@@ -585,8 +587,20 @@ function isSiteDisabled(patterns) {
  * @param {Object} changes
  * @param {string} area
  */
-function handleStorageChange(changes, area) {
+async function handleStorageChange(changes, area) {
   if (area !== "local") return;
+
+  if (changes.disabledPatterns !== undefined) {
+    const patterns = changes.disabledPatterns.newValue ?? [];
+    if (isSiteDisabled(patterns)) {
+      deactivate();
+    } else {
+      await activate();
+    }
+    return;
+  }
+
+  if (!isActive) return;
 
   const newSettings = {};
 
@@ -627,30 +641,47 @@ function setupFrameListeners(tagName) {
 // ========================================
 
 /**
- * 初期化処理
+ * ドラッグ機能を有効化
  * @returns {Promise<void>}
  */
-async function initialize() {
-  // サイトが無効化されているか確認
-  const disabledPatterns = await loadDisabledPatterns();
-  if (isSiteDisabled(disabledPatterns)) return;
-
-  // 設定の読み込み
+async function activate() {
+  if (isActive) return;
+  isActive = true;
   await loadSettings();
-
-  // ストレージ変更の監視
-  browser.storage.onChanged.addListener(handleStorageChange);
-
-  // イベントリスナーの設定
   document.addEventListener("dragstart", handleDragStart, false);
   document.addEventListener("dragover", preventDefault, false);
   document.addEventListener("dragend", preventDefault, false);
   document.addEventListener("drop", handleDrop, false);
   window.addEventListener("message", handleMessage, false);
-
-  // フレームへのリスナー設定
   setupFrameListeners("iframe");
   setupFrameListeners("frame");
+}
+
+/**
+ * ドラッグ機能を無効化
+ */
+function deactivate() {
+  if (!isActive) return;
+  isActive = false;
+  document.removeEventListener("dragstart", handleDragStart, false);
+  document.removeEventListener("dragover", preventDefault, false);
+  document.removeEventListener("dragend", preventDefault, false);
+  document.removeEventListener("drop", handleDrop, false);
+  window.removeEventListener("message", handleMessage, false);
+}
+
+/**
+ * 初期化処理
+ * @returns {Promise<void>}
+ */
+async function initialize() {
+  // ストレージ変更を常に監視（サイト無効時でも有効化に対応するため）
+  browser.storage.onChanged.addListener(handleStorageChange);
+
+  const disabledPatterns = await loadDisabledPatterns();
+  if (!isSiteDisabled(disabledPatterns)) {
+    await activate();
+  }
 }
 
 // 初期化実行
