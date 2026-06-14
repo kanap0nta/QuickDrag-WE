@@ -34,7 +34,6 @@ const elements = {
   get url() { return document.querySelector('[name="url"]'); },
   get tab() { return document.querySelector("#tab"); },
   get checkboxes() { return document.querySelectorAll(".data-types [type=checkbox]"); },
-  get saveButton() { return document.querySelector("#save-button"); },
   get siteSection() { return document.querySelector("#site-section"); },
   get siteEnabled() { return document.querySelector("#site-enabled"); },
   get currentHostnameEl() { return document.querySelector("#current-hostname"); },
@@ -79,11 +78,9 @@ async function loadSettings() {
 // サイト無効化設定
 // ========================================
 
-let currentTabId = null;
 let currentHostname = null;
 let currentPathname = null;
 let disabledPatterns = [];
-let initialSiteEnabled = true;
 
 async function loadDisabledPatterns() {
   try {
@@ -352,12 +349,10 @@ async function initialize() {
       if (url.protocol === "http:" || url.protocol === "https:" || url.protocol === "file:") {
         currentHostname = url.hostname;
         currentPathname = url.pathname;
-        currentTabId = tab.id;
         const displayPath = currentPathname !== "/" ? currentHostname + currentPathname : currentHostname;
         elements.currentHostnameEl.textContent = displayPath;
         const siteDisabled = isSiteDisabled(currentHostname, currentPathname, disabledPatterns);
-        initialSiteEnabled = !siteDisabled;
-        elements.siteEnabled.checked = initialSiteEnabled;
+        elements.siteEnabled.checked = !siteDisabled;
         elements.mainOptions.hidden = siteDisabled;
         if (siteDisabled) {
           elements.patternsContent.hidden = false;
