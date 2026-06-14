@@ -39,30 +39,6 @@ label:hover {
   padding: 0.1em 0 0.1em 1.5em;
 }
 
-.reload-notice {
-  display: flex;
-  align-items: center;
-  gap: 0.5em;
-  background: #fff3cd;
-  border: 1px solid #ffc107;
-  border-radius: 4px;
-  padding: 0.4em 0.6em;
-  margin-top: 0.3em;
-  font-size: 0.85em;
-  color: #664d03;
-}
-
-.reload-notice[hidden] {
-  display: none;
-}
-
-#reload-button {
-  padding: 0.15em 0.6em;
-  cursor: pointer;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
 .patterns-header {
   display: flex;
   align-items: center;

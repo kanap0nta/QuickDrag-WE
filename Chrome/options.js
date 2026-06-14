@@ -38,8 +38,6 @@ const elements = {
   get siteSection() { return document.querySelector("#site-section"); },
   get siteEnabled() { return document.querySelector("#site-enabled"); },
   get currentHostnameEl() { return document.querySelector("#current-hostname"); },
-  get reloadNotice() { return document.querySelector("#reload-notice"); },
-  get reloadButton() { return document.querySelector("#reload-button"); },
   get patternsHeader() { return document.querySelector("#patterns-header"); },
   get patternsArrow() { return document.querySelector("#patterns-arrow"); },
   get patternsContent() { return document.querySelector("#patterns-content"); },
@@ -86,7 +84,6 @@ let currentHostname = null;
 let currentPathname = null;
 let disabledPatterns = [];
 let initialSiteEnabled = true;
-let pageLoadedEnabled = null;
 
 async function loadDisabledPatterns() {
   try {
@@ -271,10 +268,6 @@ async function handleSiteToggle() {
   await saveDisabledPatterns(disabledPatterns);
   elements.patternsTextarea.value = disabledPatterns.join("\n");
   elements.mainOptions.hidden = !enabled;
-  const reloadNeeded = pageLoadedEnabled !== null
-    ? enabled !== pageLoadedEnabled
-    : enabled !== initialSiteEnabled;
-  elements.reloadNotice.hidden = !reloadNeeded;
 }
 
 /**
@@ -285,18 +278,6 @@ async function handlePatternsChange() {
   disabledPatterns = text.split("\n").map(l => l.trim()).filter(l => l);
   await saveDisabledPatterns(disabledPatterns);
   updateSiteUI(disabledPatterns);
-}
-
-/**
- * リロードボタンのハンドラ
- */
-async function handleReloadButton() {
-  if (currentTabId !== null) {
-    try {
-      await chrome.tabs.reload(currentTabId);
-    } catch { /* ignore */ }
-  }
-  window.close();
 }
 
 /**
@@ -348,8 +329,6 @@ function setupEventListeners() {
   elements.patternsTextarea.addEventListener("input", debouncedPatternsChange);
   elements.patternsTextarea.addEventListener("change", handlePatternsChange);
 
-  // リロードボタン
-  elements.reloadButton.addEventListener("click", handleReloadButton);
 }
 
 // ========================================
@@ -383,13 +362,6 @@ async function initialize() {
         if (siteDisabled) {
           elements.patternsContent.hidden = false;
           elements.patternsArrow.textContent = "▼";
-        }
-        try {
-          const result = await chrome.runtime.sendMessage({ type: "getPageLoadedState", tabId: currentTabId });
-          pageLoadedEnabled = result?.enabled ?? null;
-        } catch {}
-        if (pageLoadedEnabled !== null && pageLoadedEnabled !== initialSiteEnabled) {
-          elements.reloadNotice.hidden = false;
         }
       } else {
         elements.siteSection.hidden = true;

@@ -33,13 +33,6 @@ async function handleMessage(request, sender, sendResponse) {
         sendResponse({ success: true, message: `downloadImage: ${request.value}` });
         break;
 
-      case "getPageLoadedState": {
-        const { pageLoadedStates = {} } = await browser.storage.session.get("pageLoadedStates");
-        const val = pageLoadedStates[String(request.tabId)];
-        sendResponse({ enabled: val ?? null });
-        break;
-      }
-
       default:
         sendResponse({ success: false, message: "Unknown message type" });
         break;
@@ -243,39 +236,14 @@ async function updateTabIcon(tabId, url) {
   try {
     const urlObj = new URL(url);
     if (urlObj.protocol !== "http:" && urlObj.protocol !== "https:" && urlObj.protocol !== "file:") return;
-    let disabled;
-    const { pageLoadedStates = {} } = await browser.storage.session.get("pageLoadedStates");
-    if (String(tabId) in pageLoadedStates) {
-      // ページが実際に読み込まれた時の状態を使う（リロード前後でアイコンが変わる）
-      disabled = !pageLoadedStates[String(tabId)];
-    } else {
-      // pageLoadedStatesにない場合は現在の設定にフォールバック
-      const data = await browser.storage.local.get("disabledPatterns");
-      const patterns = data.disabledPatterns ?? [];
-      disabled = isSiteDisabled(urlObj.hostname, urlObj.pathname, patterns);
-    }
+    const data = await browser.storage.local.get("disabledPatterns");
+    const patterns = data.disabledPatterns ?? [];
+    const disabled = isSiteDisabled(urlObj.hostname, urlObj.pathname, patterns);
     if (disabled) {
       await browser.action.setIcon({ imageData: await getDisabledIconData(), tabId });
     } else {
       await browser.action.setIcon({ path: { 48: "icons/icon_48.png", 96: "icons/icon_96.png" }, tabId });
     }
-  } catch { /* ignore */ }
-}
-
-// ========================================
-// タブ読み込み状態管理
-// ========================================
-
-async function recordPageLoadedState(tabId, url) {
-  try {
-    const urlObj = new URL(url);
-    if (urlObj.protocol !== "http:" && urlObj.protocol !== "https:" && urlObj.protocol !== "file:") return;
-    const data = await browser.storage.local.get("disabledPatterns");
-    const patterns = data.disabledPatterns ?? [];
-    const enabled = !isSiteDisabled(urlObj.hostname, urlObj.pathname, patterns);
-    const { pageLoadedStates = {} } = await browser.storage.session.get("pageLoadedStates");
-    pageLoadedStates[String(tabId)] = enabled;
-    await browser.storage.session.set({ pageLoadedStates });
   } catch { /* ignore */ }
 }
 
@@ -291,20 +259,9 @@ browser.tabs.onActivated.addListener(async ({ tabId }) => {
 });
 
 browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-  if (changeInfo.status === "complete" && tab.url) {
-    await recordPageLoadedState(tabId, tab.url);
-  }
   if (changeInfo.url || changeInfo.status === "complete") {
     await updateTabIcon(tabId, tab.url);
   }
-});
-
-browser.tabs.onRemoved.addListener(async (tabId) => {
-  try {
-    const { pageLoadedStates = {} } = await browser.storage.session.get("pageLoadedStates");
-    delete pageLoadedStates[String(tabId)];
-    await browser.storage.session.set({ pageLoadedStates });
-  } catch { /* ignore */ }
 });
 
 browser.storage.onChanged.addListener(async (changes, area) => {
