@@ -24,10 +24,6 @@ label:hover {
   background: linear-gradient(transparent 95%, #7e7e7e 95%);
 }
 
-.url {
-  width: 100%;
-}
-
 .auto-save-notice {
   font-size: 0.85em;
   color: #aaa;
