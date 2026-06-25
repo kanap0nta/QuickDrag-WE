@@ -59,6 +59,9 @@ const PATTERNS = {
 
   // FTPパス判定
   FTP_PATH: /^ht(tp:\/\/ftp\.)/i,
+
+  // Base64データURI判定
+  DATA_URI: /^data:image\/[^;]+;base64,/i,
 };
 
 // TLDリスト（ https://data.iana.org/TLD/tlds-alpha-by-domain.txt （Version 2025101800）+ example|invalid|localhost|internal|test|onion）
@@ -298,7 +301,13 @@ function findFirstLinkParent(node) {
 function downloadViaAnchor(url) {
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = "";
+  const dataMatch = url.match(/^data:image\/([^;]+);base64,/i);
+  if (dataMatch) {
+    const ext = dataMatch[1].toLowerCase().replace("svg+xml", "svg").replace("jpeg", "jpg");
+    anchor.download = `image.${ext}`;
+  } else {
+    anchor.download = "";
+  }
   anchor.click();
 }
 
@@ -367,7 +376,6 @@ function processDragFromElement(event) {
 
   // 画像要素を探索
   if (!(target instanceof HTMLImageElement)) {
-    // 画像要素でない場合、子要素から画像を探す
     if (settings.isPreferSaveImage) {
       const foundImg = findFirstImageChild(target);
       if (foundImg) {
@@ -396,14 +404,17 @@ function processDragFromElement(event) {
     setState({
       isImage: true,
       selectStr: target.src,
-      isBase64: !PATTERNS.SCHEME.test(target.src),
+      isBase64: !PATTERNS.SCHEME.test(target.src) || PATTERNS.DATA_URI.test(target.src),
     });
-  } else {
+  } else if (target.href !== undefined) {
     // リンクの場合
     setState({
       isAddressSearch: true,
       selectStr: target.href,
     });
+  } else {
+    // href なし要素はテキストドラッグにフォールバック
+    processDragFromText(event);
   }
 }
 
@@ -512,6 +523,19 @@ function handleImageDrop(event) {
  * @param {DragEvent} event
  */
 function handleLinkDrop(event) {
+  // data:image URIはBlob URLに変換して新規タブで表示
+  if (PATTERNS.DATA_URI.test(state.selectStr)) {
+    const match = state.selectStr.match(/^data:([^;]+);base64,(.+)$/i);
+    if (match) {
+      const bytes = atob(match[2]);
+      const arr = new Uint8Array(bytes.length);
+      for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+      const blobUrl = URL.createObjectURL(new Blob([arr], { type: match[1] }));
+      window.open(blobUrl, "_blank");
+    }
+    return;
+  }
+
   // Ctrl押下時はクリップボードにコピー
   if (event.ctrlKey) {
     copyToClipboard(event.dataTransfer.getData("text/plain"));
