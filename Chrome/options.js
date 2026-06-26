@@ -24,7 +24,7 @@ const STORAGE_KEYS = [
   "checkboxArray",
 ];
 
-const SITE_STORAGE_KEY = "disabledPatterns";
+const RULES_STORAGE_KEY = "compatibilityRules";
 
 // ========================================
 // DOM要素の取得
@@ -40,19 +40,22 @@ const elements = {
   get patternsHeader() { return document.querySelector("#patterns-header"); },
   get patternsArrow() { return document.querySelector("#patterns-arrow"); },
   get patternsContent() { return document.querySelector("#patterns-content"); },
-  get patternsTextarea() { return document.querySelector("#patterns-textarea"); },
+  get compatTbody() { return document.querySelector("#compat-tbody"); },
+  get addRuleBtn() { return document.querySelector("#add-rule"); },
   get mainOptions() { return document.querySelector("#main-options"); },
 };
+
+// ========================================
+// 翻訳ヘルパー
+// ========================================
+function t(key) {
+  return (window._qdT && window._qdT[key]) || key;
+}
 
 // ========================================
 // ストレージ操作
 // ========================================
 
-/**
- * 設定をストレージに保存
- * @param {Object} settings
- * @returns {Promise<void>}
- */
 async function saveSettings(settings) {
   try {
     await chrome.storage.local.set(settings);
@@ -61,10 +64,6 @@ async function saveSettings(settings) {
   }
 }
 
-/**
- * ストレージから設定を読み込む
- * @returns {Promise<Object>}
- */
 async function loadSettings() {
   try {
     return await chrome.storage.local.get(STORAGE_KEYS);
@@ -75,61 +74,196 @@ async function loadSettings() {
 }
 
 // ========================================
-// サイト無効化設定
+// 互換性ルール管理 (GlitterDrag方式)
 // ========================================
 
-let currentHostname = null;
-let currentPathname = null;
-let disabledPatterns = [];
+let currentUrlObj = null;
+let compatibilityRules = [];
 
-async function loadDisabledPatterns() {
+function migrateOldPatterns(patterns) {
+  return patterns
+    .map(p => p.trim())
+    .filter(p => p)
+    .map(p => {
+      const escaped = p.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
+      if (!p.includes("*") && !p.includes("/")) {
+        return { regexp: `^https?://${escaped}(/.*)?$`, status: "disable" };
+      }
+      return { regexp: `https?://${escaped}`, status: "disable" };
+    });
+}
+
+async function loadCompatibilityRules() {
   try {
-    const data = await chrome.storage.local.get(SITE_STORAGE_KEY);
-    return data[SITE_STORAGE_KEY] ?? [];
+    const data = await chrome.storage.local.get([RULES_STORAGE_KEY, "disabledPatterns"]);
+    if (data[RULES_STORAGE_KEY] !== undefined) {
+      return data[RULES_STORAGE_KEY];
+    }
+    if (data.disabledPatterns && data.disabledPatterns.length > 0) {
+      const rules = migrateOldPatterns(data.disabledPatterns);
+      await chrome.storage.local.set({ [RULES_STORAGE_KEY]: rules });
+      await chrome.storage.local.remove("disabledPatterns");
+      return rules;
+    }
+    return [];
   } catch {
     return [];
   }
 }
 
-async function saveDisabledPatterns(patterns) {
+async function saveCompatibilityRules(rules) {
   try {
-    await chrome.storage.local.set({ [SITE_STORAGE_KEY]: patterns });
+    const toSave = rules.filter(r => (r.regexp ?? "").trim() || (r.host ?? "").trim());
+    await chrome.storage.local.set({ [RULES_STORAGE_KEY]: toSave });
   } catch (error) {
-    console.error("Failed to save disabled patterns:", error);
+    console.error("Failed to save compatibility rules:", error);
   }
 }
 
-function matchesPattern(hostname, pathname, pattern) {
-  const trimmed = pattern.trim();
-  if (!trimmed) return false;
-  const target = trimmed.includes("/") ? hostname + pathname : hostname;
-  const escaped = trimmed.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
-  try {
-    return new RegExp(`^${escaped}$`, "i").test(target);
-  } catch {
-    return false;
+function checkCompatibility(urlObj, rules) {
+  for (const rule of rules) {
+    if (rule.host && rule.host === urlObj.host) {
+      return rule.status ?? "disable";
+    }
+    if (rule.regexp) {
+      try {
+        if (new RegExp(rule.regexp).test(urlObj.href)) {
+          return rule.status ?? "disable";
+        }
+      } catch { /* invalid regexp */ }
+    }
   }
+  return "enable";
 }
 
-function isSiteDisabled(hostname, pathname, patterns) {
-  return patterns.some(p => matchesPattern(hostname, pathname, p));
+function isSiteDisabled(urlObj, rules) {
+  return checkCompatibility(urlObj, rules) === "disable";
 }
 
-function updateSiteUI(patterns) {
-  if (!currentHostname) return;
-  const nowDisabled = isSiteDisabled(currentHostname, currentPathname, patterns);
+function updateSiteUI(rules) {
+  if (!currentUrlObj) return;
+  const nowDisabled = isSiteDisabled(currentUrlObj, rules);
   elements.siteEnabled.checked = !nowDisabled;
   elements.mainOptions.hidden = nowDisabled;
+}
+
+// ========================================
+// ルールテーブルの描画
+// ========================================
+
+function renderRules() {
+  const tbody = elements.compatTbody;
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  for (let i = 0; i < compatibilityRules.length; i++) {
+    const rule = compatibilityRules[i];
+    const tr = document.createElement("tr");
+    tr.dataset.index = String(i);
+
+    const patternTd = document.createElement("td");
+    const patternInput = document.createElement("input");
+    patternInput.type = "text";
+    patternInput.className = "rule-pattern";
+    patternInput.value = rule.regexp ?? rule.host ?? "";
+    patternInput.spellcheck = false;
+    patternInput.placeholder = "^https?://example\\.com";
+    patternTd.appendChild(patternInput);
+    tr.appendChild(patternTd);
+
+    const statusTd = document.createElement("td");
+    const statusSelect = document.createElement("select");
+    statusSelect.className = "rule-status";
+    const disableOpt = document.createElement("option");
+    disableOpt.value = "disable";
+    disableOpt.textContent = t("status_disable");
+    const enableOpt = document.createElement("option");
+    enableOpt.value = "enable";
+    enableOpt.textContent = t("status_enable");
+    statusSelect.appendChild(disableOpt);
+    statusSelect.appendChild(enableOpt);
+    statusSelect.value = rule.status ?? "disable";
+    statusTd.appendChild(statusSelect);
+    tr.appendChild(statusTd);
+
+    const deleteTd = document.createElement("td");
+    const deleteBtn = document.createElement("button");
+    deleteBtn.className = "delete-rule";
+    deleteBtn.textContent = "×";
+    deleteTd.appendChild(deleteBtn);
+    tr.appendChild(deleteTd);
+
+    tbody.appendChild(tr);
+  }
+}
+
+// ========================================
+// テーブルイベントハンドラ
+// ========================================
+
+const debouncedSaveRule = debounce(async (idx, rule) => {
+  if (!(rule.regexp ?? "").trim() && !(rule.host ?? "").trim()) {
+    compatibilityRules.splice(idx, 1);
+    await saveCompatibilityRules(compatibilityRules);
+    renderRules();
+  } else {
+    compatibilityRules[idx] = rule;
+    await saveCompatibilityRules(compatibilityRules);
+  }
+  updateSiteUI(compatibilityRules);
+}, 500);
+
+async function handleTableInput(event) {
+  const target = event.target;
+  if (!target.classList.contains("rule-pattern")) return;
+  const tr = target.closest("tr[data-index]");
+  if (!tr) return;
+  const idx = parseInt(tr.dataset.index, 10);
+  if (isNaN(idx) || idx < 0 || idx >= compatibilityRules.length) return;
+  const rule = { ...compatibilityRules[idx] };
+  delete rule.host;
+  rule.regexp = target.value;
+  debouncedSaveRule(idx, rule);
+}
+
+async function handleTableChange(event) {
+  const target = event.target;
+  if (!target.classList.contains("rule-status")) return;
+  const tr = target.closest("tr[data-index]");
+  if (!tr) return;
+  const idx = parseInt(tr.dataset.index, 10);
+  if (isNaN(idx) || idx < 0 || idx >= compatibilityRules.length) return;
+  const rule = { ...compatibilityRules[idx], status: target.value };
+  compatibilityRules[idx] = rule;
+  await saveCompatibilityRules(compatibilityRules);
+  updateSiteUI(compatibilityRules);
+}
+
+async function handleDeleteRule(event) {
+  const target = event.target;
+  if (!target.classList.contains("delete-rule")) return;
+  const tr = target.closest("tr[data-index]");
+  if (!tr) return;
+  const idx = parseInt(tr.dataset.index, 10);
+  if (isNaN(idx) || idx < 0 || idx >= compatibilityRules.length) return;
+  compatibilityRules.splice(idx, 1);
+  await saveCompatibilityRules(compatibilityRules);
+  renderRules();
+  updateSiteUI(compatibilityRules);
+}
+
+async function handleAddRule() {
+  compatibilityRules.push({ regexp: "", status: "disable" });
+  await saveCompatibilityRules(compatibilityRules);
+  renderRules();
+  elements.patternsContent.hidden = false;
+  elements.patternsArrow.textContent = "▼";
 }
 
 // ========================================
 // 設定値の取得
 // ========================================
 
-/**
- * 現在のフォーム値から設定オブジェクトを生成
- * @returns {Object}
- */
 function getCurrentSettings() {
   return {
     searchEngine: elements.engine.value,
@@ -139,10 +273,6 @@ function getCurrentSettings() {
   };
 }
 
-/**
- * チェックされたチェックボックスのdata-type値を取得
- * @returns {string[]}
- */
 function getCheckedTypes() {
   const dataTypes = [];
   for (const checkbox of elements.checkboxes) {
@@ -157,22 +287,11 @@ function getCheckedTypes() {
 // UI更新
 // ========================================
 
-/**
- * UIを設定値で更新
- * @param {Object} settings
- */
 function updateUI(settings) {
-  // 検索エンジン
   elements.engine.value = settings.searchEngine ?? DEFAULTS.SEARCH_ENGINE;
-
-  // 検索エンジンURL
   elements.url.value = settings.searchEngineURL ?? DEFAULTS.SEARCH_ENGINE_URL;
   updateUrlReadOnly();
-
-  // タブ位置
   elements.tab.value = settings.tabPosition ?? DEFAULTS.TAB_POSITION;
-
-  // チェックボックス
   const checkboxArray = settings.checkboxArray ?? DEFAULTS.CHECKBOX_ARRAY;
   for (const checkbox of elements.checkboxes) {
     const dataType = checkbox.getAttribute("data-type");
@@ -180,9 +299,6 @@ function updateUI(settings) {
   }
 }
 
-/**
- * URL入力欄のreadOnly状態を更新
- */
 function updateUrlReadOnly() {
   const selectedOption = elements.engine.selectedOptions[0];
   elements.url.readOnly = Boolean(Number(selectedOption?.dataset.isreadonly));
@@ -192,17 +308,10 @@ function updateUrlReadOnly() {
 // イベントハンドラ
 // ========================================
 
-/**
- * 設定変更時の自動保存ハンドラ
- */
 function handleSettingChange() {
-  const settings = getCurrentSettings();
-  saveSettings(settings);
+  saveSettings(getCurrentSettings());
 }
 
-/**
- * 検索エンジン変更時のハンドラ
- */
 function handleEngineChange() {
   const selectedOption = elements.engine.selectedOptions[0];
   elements.url.value = selectedOption.dataset.url;
@@ -210,19 +319,10 @@ function handleEngineChange() {
   handleSettingChange();
 }
 
-/**
- * URL入力時のハンドラ（debounce付き）
- */
 const handleUrlInput = debounce(() => {
   handleSettingChange();
 }, 500);
 
-/**
- * debounce関数
- * @param {Function} func
- * @param {number} wait
- * @returns {Function}
- */
 function debounce(func, wait) {
   let timeoutId = null;
   return function(...args) {
@@ -231,44 +331,37 @@ function debounce(func, wait) {
   };
 }
 
-/**
- * サイト有効/無効トグルのハンドラ
- */
 async function handleSiteToggle() {
-  if (!currentHostname) return;
+  if (!currentUrlObj) return;
   const enabled = elements.siteEnabled.checked;
+
   if (!enabled) {
-    if (!isSiteDisabled(currentHostname, currentPathname, disabledPatterns)) {
-      const pattern = currentPathname !== "/" ? currentHostname + currentPathname : currentHostname;
-      disabledPatterns.push(pattern);
+    if (!isSiteDisabled(currentUrlObj, compatibilityRules)) {
+      const escaped = currentUrlObj.hostname.replace(/[.+^${}()|[\]\\]/g, "\\$&");
+      compatibilityRules.push({ regexp: `^https?://${escaped}(/.*)?$`, status: "disable" });
     }
-    // パターンセクションを展開
     elements.patternsContent.hidden = false;
     elements.patternsArrow.textContent = "▼";
   } else {
-    disabledPatterns = disabledPatterns.filter(p => !matchesPattern(currentHostname, currentPathname, p));
-    // パターンセクションを折りたたむ
+    compatibilityRules = compatibilityRules.filter(rule => {
+      if ((rule.status ?? "disable") !== "disable") return true;
+      if (rule.host && rule.host === currentUrlObj.host) return false;
+      if (rule.regexp) {
+        try {
+          if (new RegExp(rule.regexp).test(currentUrlObj.href)) return false;
+        } catch { /* keep invalid regexps */ }
+      }
+      return true;
+    });
     elements.patternsContent.hidden = true;
     elements.patternsArrow.textContent = "▶";
   }
-  await saveDisabledPatterns(disabledPatterns);
-  elements.patternsTextarea.value = disabledPatterns.join("\n");
+
+  await saveCompatibilityRules(compatibilityRules);
+  renderRules();
   elements.mainOptions.hidden = !enabled;
 }
 
-/**
- * パターンテキストエリア変更のハンドラ
- */
-async function handlePatternsChange() {
-  const text = elements.patternsTextarea.value;
-  disabledPatterns = text.split("\n").map(l => l.trim()).filter(l => l);
-  await saveDisabledPatterns(disabledPatterns);
-  updateSiteUI(disabledPatterns);
-}
-
-/**
- * パターンセクションの展開/折りたたみ
- */
 function handlePatternsToggle() {
   const content = elements.patternsContent;
   content.hidden = !content.hidden;
@@ -279,29 +372,18 @@ function handlePatternsToggle() {
 // イベントリスナーの設定
 // ========================================
 
-/**
- * 全てのイベントリスナーを設定
- */
 function setupEventListeners() {
-  // 検索エンジン選択
   elements.engine.addEventListener("change", handleEngineChange);
-
-  // URL入力（入力中は遅延保存）
   elements.url.addEventListener("input", handleUrlInput);
   elements.url.addEventListener("change", handleSettingChange);
-
-  // タブ位置選択
   elements.tab.addEventListener("change", handleSettingChange);
 
-  // チェックボックス
   for (const checkbox of elements.checkboxes) {
     checkbox.addEventListener("change", handleSettingChange);
   }
 
-  // サイトトグル
   elements.siteEnabled.addEventListener("change", handleSiteToggle);
 
-  // パターンセクション展開
   elements.patternsHeader.addEventListener("click", handlePatternsToggle);
   elements.patternsHeader.addEventListener("keydown", (e) => {
     if (e.key === "Enter" || e.key === " ") {
@@ -310,37 +392,29 @@ function setupEventListeners() {
     }
   });
 
-  // パターンテキストエリア（入力中は遅延保存）
-  const debouncedPatternsChange = debounce(handlePatternsChange, 500);
-  elements.patternsTextarea.addEventListener("input", debouncedPatternsChange);
-  elements.patternsTextarea.addEventListener("change", handlePatternsChange);
+  elements.compatTbody.addEventListener("input", handleTableInput);
+  elements.compatTbody.addEventListener("change", handleTableChange);
+  elements.compatTbody.addEventListener("click", handleDeleteRule);
 
+  elements.addRuleBtn.addEventListener("click", handleAddRule);
 }
 
 // ========================================
 // 初期化
 // ========================================
 
-/**
- * 初期化処理
- */
 async function initialize() {
-  // 無効化パターンを読み込む
-  disabledPatterns = await loadDisabledPatterns();
-  elements.patternsTextarea.value = disabledPatterns.join("\n");
+  compatibilityRules = await loadCompatibilityRules();
 
-  // 現在のタブ情報を取得してサイトトグルを設定
   try {
     const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
     const tab = tabs[0];
     if (tab?.url) {
       const url = new URL(tab.url);
       if (url.protocol === "http:" || url.protocol === "https:" || url.protocol === "file:") {
-        currentHostname = url.hostname;
-        currentPathname = url.pathname;
-        const displayPath = currentPathname !== "/" ? currentHostname + currentPathname : currentHostname;
-        elements.currentHostnameEl.textContent = displayPath;
-        const siteDisabled = isSiteDisabled(currentHostname, currentPathname, disabledPatterns);
+        currentUrlObj = url;
+        elements.currentHostnameEl.textContent = url.hostname;
+        const siteDisabled = isSiteDisabled(currentUrlObj, compatibilityRules);
         elements.siteEnabled.checked = !siteDisabled;
         elements.mainOptions.hidden = siteDisabled;
         if (siteDisabled) {
@@ -356,6 +430,8 @@ async function initialize() {
   } catch {
     elements.siteSection.hidden = true;
   }
+
+  renderRules();
 
   await migrateCheckboxArray();
   const settings = await loadSettings();
@@ -374,7 +450,6 @@ async function migrateCheckboxArray() {
   }
 }
 
-// DOMContentLoaded時に初期化
 document.addEventListener("DOMContentLoaded", initialize);
 
 })();

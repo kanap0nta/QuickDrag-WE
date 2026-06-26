@@ -636,7 +636,7 @@ async function handleNavigation() {
 async function handleStorageChange(changes, area) {
   if (area !== "local") return;
 
-  if (changes.disabledPatterns !== undefined) {
+  if (changes.compatibilityRules !== undefined) {
     if (await checkDisabled()) {
       deactivate();
     } else {

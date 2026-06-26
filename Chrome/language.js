@@ -20,8 +20,13 @@ const TRANSLATIONS = Object.freeze({
     tab_open_first: "First",
     auto_save_notice: "Settings are saved automatically",
     site_enabled_label: " Enable on this site",
-    patterns_title: "Disabled site patterns",
-    patterns_help: "One pattern per line. Use * as wildcard. Without / → hostname match (example.com). With / → path match (example.com/path/*)",
+    patterns_title: "Compatibility Rules",
+    patterns_help: "Rules are checked in order; first match wins. Pattern: URL regexp (^https?://example\\.com) or hostname (example.com). Disable = stop QuickDrag. Enable = allow QuickDrag (overrides later Disable rules).",
+    add_rule: "Add rule",
+    th_pattern: "Pattern",
+    th_status: "Status",
+    status_disable: "Disable",
+    status_enable: "Enable",
   },
   "zh-CN": {
     setting_title: "QuickDrag 选项",
@@ -326,8 +331,13 @@ const TRANSLATIONS = Object.freeze({
     tab_open_first: "先頭",
     auto_save_notice: "設定は自動的に保存されます",
     site_enabled_label: " このサイトで有効にする",
-    patterns_title: "無効サイトのパターン",
-    patterns_help: "1行につき1パターン。*はワイルドカード。/ なし→ホスト名マッチ (example.com)、/ あり→パスマッチ (example.com/path/*)",
+    patterns_title: "互換性ルール",
+    patterns_help: "ルールは順番にチェックされ、最初にマッチしたルールが適用されます。パターン: URL正規表現 (^https?://example\\.com) またはホスト名 (example.com)。無効=QuickDragを停止、有効=QuickDragを許可（後の無効ルールを上書き）。",
+    add_rule: "ルールを追加",
+    th_pattern: "パターン",
+    th_status: "状態",
+    status_disable: "無効",
+    status_enable: "有効",
   },
 });
 
@@ -354,6 +364,9 @@ const ELEMENT_MAPPINGS = Object.freeze({
     "site-enabled-label": "site_enabled_label",
     "patterns-title": "patterns_title",
     "patterns-help": "patterns_help",
+    "th-pattern": "th_pattern",
+    "th-status": "th_status",
+    "add-rule": "add_rule",
   },
 });
 
@@ -408,6 +421,7 @@ function findBestTranslation(languages) {
  */
 function applyTranslation(translation) {
   const fallback = TRANSLATIONS[DEFAULT_LANGUAGE];
+  window._qdT = Object.assign({}, fallback, translation);
   // textContent を設定する要素
   for (const [elementId, translationKey] of Object.entries(ELEMENT_MAPPINGS.textContent)) {
     const element = document.getElementById(elementId);
@@ -435,10 +449,10 @@ function setLanguage(languages) {
  * 初期化処理
  */
 function initialize() {
+  // 英語を同期的に適用して window._qdT を即時利用可能にする
+  applyTranslation(TRANSLATIONS[DEFAULT_LANGUAGE]);
   chrome.i18n.getAcceptLanguages((languages) => {
     if (chrome.runtime.lastError) {
-      console.error("Failed to get accept languages:", chrome.runtime.lastError);
-      applyTranslation(TRANSLATIONS[DEFAULT_LANGUAGE]);
       return;
     }
     setLanguage(languages);

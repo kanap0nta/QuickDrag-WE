@@ -47,8 +47,8 @@ async function handleMessage(request, sender, sendResponse) {
           if (urlObj.protocol !== "http:" && urlObj.protocol !== "https:" && urlObj.protocol !== "file:") {
             sendResponse({ disabled: false }); break;
           }
-          const patterns = await getDisabledPatterns();
-          sendResponse({ disabled: isSiteDisabled(urlObj.hostname, urlObj.pathname, patterns) });
+          const rules = await getCompatibilityRules();
+          sendResponse({ disabled: isSiteDisabled(urlObj, rules) });
         } catch {
           sendResponse({ disabled: false });
         }
@@ -200,32 +200,59 @@ async function downloadImage(request) {
 
 
 // ========================================
-// パターンマッチング
+// 互換性ルール管理 (GlitterDrag方式)
 // ========================================
 
-let cachedDisabledPatterns = null;
+let cachedCompatibilityRules = null;
 
-async function getDisabledPatterns() {
-  if (cachedDisabledPatterns !== null) return cachedDisabledPatterns;
-  const data = await chrome.storage.local.get("disabledPatterns");
-  cachedDisabledPatterns = data.disabledPatterns ?? [];
-  return cachedDisabledPatterns;
+function migrateOldPatterns(patterns) {
+  return patterns
+    .map(p => p.trim())
+    .filter(p => p)
+    .map(p => {
+      const escaped = p.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
+      if (!p.includes("*") && !p.includes("/")) {
+        return { regexp: `^https?://${escaped}(/.*)?$`, status: "disable" };
+      }
+      return { regexp: `https?://${escaped}`, status: "disable" };
+    });
 }
 
-function matchesPattern(hostname, pathname, pattern) {
-  const trimmed = pattern.trim();
-  if (!trimmed) return false;
-  const target = trimmed.includes("/") ? hostname + pathname : hostname;
-  const escaped = trimmed.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
-  try {
-    return new RegExp(`^${escaped}$`, "i").test(target);
-  } catch {
-    return false;
+async function getCompatibilityRules() {
+  if (cachedCompatibilityRules !== null) return cachedCompatibilityRules;
+  const data = await chrome.storage.local.get(["compatibilityRules", "disabledPatterns"]);
+  if (data.compatibilityRules !== undefined) {
+    cachedCompatibilityRules = data.compatibilityRules;
+    return cachedCompatibilityRules;
   }
+  if (data.disabledPatterns && data.disabledPatterns.length > 0) {
+    cachedCompatibilityRules = migrateOldPatterns(data.disabledPatterns);
+    await chrome.storage.local.set({ compatibilityRules: cachedCompatibilityRules });
+    await chrome.storage.local.remove("disabledPatterns");
+  } else {
+    cachedCompatibilityRules = [];
+  }
+  return cachedCompatibilityRules;
 }
 
-function isSiteDisabled(hostname, pathname, patterns) {
-  return patterns.some(p => matchesPattern(hostname, pathname, p));
+function checkCompatibility(urlObj, rules) {
+  for (const rule of rules) {
+    if (rule.host && rule.host === urlObj.host) {
+      return rule.status ?? "disable";
+    }
+    if (rule.regexp) {
+      try {
+        if (new RegExp(rule.regexp).test(urlObj.href)) {
+          return rule.status ?? "disable";
+        }
+      } catch { /* invalid regexp */ }
+    }
+  }
+  return "enable";
+}
+
+function isSiteDisabled(urlObj, rules) {
+  return checkCompatibility(urlObj, rules) === "disable";
 }
 
 // ========================================
@@ -267,8 +294,8 @@ async function updateTabIcon(tabId, url) {
   try {
     const urlObj = new URL(url);
     if (urlObj.protocol !== "http:" && urlObj.protocol !== "https:" && urlObj.protocol !== "file:") return;
-    const patterns = await getDisabledPatterns();
-    const disabled = isSiteDisabled(urlObj.hostname, urlObj.pathname, patterns);
+    const rules = await getCompatibilityRules();
+    const disabled = isSiteDisabled(urlObj, rules);
     if (disabled) {
       await chrome.action.setIcon({ imageData: await getDisabledIconData(), tabId });
     } else {
@@ -298,8 +325,8 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 });
 
 chrome.storage.onChanged.addListener(async (changes, area) => {
-  if (area !== "local" || !changes.disabledPatterns) return;
-  cachedDisabledPatterns = changes.disabledPatterns.newValue ?? [];
+  if (area !== "local" || !changes.compatibilityRules) return;
+  cachedCompatibilityRules = changes.compatibilityRules.newValue ?? [];
   const tabs = await chrome.tabs.query({});
   for (const tab of tabs) {
     await updateTabIcon(tab.id, tab.url);
