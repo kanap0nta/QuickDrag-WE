@@ -32,6 +32,14 @@ body {
   padding: 0.5em 0;
 }
 
+section {
+  margin-top: 0.8em;
+}
+
+#main-options > .auto-save-notice {
+  margin-top: 0.8em;
+}
+
 
 
 #site-rules-table {

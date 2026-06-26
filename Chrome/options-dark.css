@@ -100,3 +100,18 @@ body {
 .toggle-switch input:checked + .toggle-slider {
   background-color: #5ba3f5;
 }
+
+#site-rules-table th {
+  background: #555;
+}
+
+#site-rules-table th,
+#site-rules-table td {
+  border-bottom-color: #555;
+}
+
+.rule-pattern {
+  background-color: #555;
+  color: #fafafa;
+  border-color: #666;
+}

@@ -1,5 +1,19 @@
 "use strict";
 
+// options.js と site-rules.js で共有するマイグレーション関数
+window.qdMigrateOldPatterns = function(patterns) {
+  return patterns
+    .map(p => p.trim())
+    .filter(p => p)
+    .map(p => {
+      const escaped = p.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
+      if (!p.includes("*") && !p.includes("/")) {
+        return { regexp: `^https?://${escaped}(/.*)?$`, status: "disable" };
+      }
+      return { regexp: `^https?://${escaped}$`, status: "disable" };
+    });
+};
+
 (() => {
 
 // ========================================

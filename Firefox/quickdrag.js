@@ -39,6 +39,8 @@ const settings = {
 };
 
 let isActive = false;
+let origPushState = null;
+let origReplaceState = null;
 
 // ========================================
 // 正規表現パターン
@@ -645,6 +647,12 @@ async function activate() {
   document.addEventListener("dragend", preventDefault, false);
   document.addEventListener("drop", handleDrop, false);
   window.addEventListener("message", handleMessage, false);
+  if (window === window.top && origPushState === null) {
+    origPushState = history.pushState.bind(history);
+    origReplaceState = history.replaceState.bind(history);
+    history.pushState = function (...args) { origPushState(...args); handleNavigation(); };
+    history.replaceState = function (...args) { origReplaceState(...args); handleNavigation(); };
+  }
 }
 
 /**
@@ -658,6 +666,14 @@ function deactivate() {
   document.removeEventListener("dragend", preventDefault, false);
   document.removeEventListener("drop", handleDrop, false);
   window.removeEventListener("message", handleMessage, false);
+  if (origPushState !== null) {
+    history.pushState = origPushState;
+    origPushState = null;
+  }
+  if (origReplaceState !== null) {
+    history.replaceState = origReplaceState;
+    origReplaceState = null;
+  }
 }
 
 /**
@@ -667,20 +683,11 @@ function deactivate() {
 async function initialize() {
   browser.storage.onChanged.addListener(handleStorageChange);
 
-  // トップフレームのみ SPA ナビゲーションを監視（popstate/hashchange/pushState）
+  // トップフレームのみ SPA ナビゲーションを監視（popstate/hashchange）
+  // pushState/replaceState のパッチは activate/deactivate で管理する
   if (window === window.top) {
     window.addEventListener("popstate", handleNavigation, false);
     window.addEventListener("hashchange", handleNavigation, false);
-    const origPushState = history.pushState.bind(history);
-    const origReplaceState = history.replaceState.bind(history);
-    history.pushState = function (...args) {
-      origPushState(...args);
-      handleNavigation();
-    };
-    history.replaceState = function (...args) {
-      origReplaceState(...args);
-      handleNavigation();
-    };
   }
 
   if (!await checkDisabled()) {

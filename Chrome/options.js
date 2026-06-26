@@ -63,19 +63,6 @@ async function loadSettings() {
 let currentUrlObj = null;
 let siteRules = [];
 
-function migrateOldPatterns(patterns) {
-  return patterns
-    .map(p => p.trim())
-    .filter(p => p)
-    .map(p => {
-      const escaped = p.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
-      if (!p.includes("*") && !p.includes("/")) {
-        return { regexp: `^https?://${escaped}(/.*)?$`, status: "disable" };
-      }
-      return { regexp: `^https?://${escaped}$`, status: "disable" };
-    });
-}
-
 async function loadSiteRules() {
   try {
     const data = await chrome.storage.local.get([RULES_STORAGE_KEY, "disabledPatterns"]);
@@ -83,7 +70,7 @@ async function loadSiteRules() {
       return data[RULES_STORAGE_KEY];
     }
     if (data.disabledPatterns && data.disabledPatterns.length > 0) {
-      const rules = migrateOldPatterns(data.disabledPatterns);
+      const rules = window.qdMigrateOldPatterns(data.disabledPatterns);
       await chrome.storage.local.set({ [RULES_STORAGE_KEY]: rules });
       await chrome.storage.local.remove("disabledPatterns");
       return rules;

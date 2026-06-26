@@ -230,24 +230,20 @@ async function getSiteRules() {
   return cachedSiteRules;
 }
 
-function checkSiteRule(urlObj, rules) {
+function isSiteDisabled(urlObj, rules) {
   for (const rule of rules) {
     if (rule.host && rule.host === urlObj.host) {
-      return rule.status ?? "disable";
+      return (rule.status ?? "disable") === "disable";
     }
     if (rule.regexp) {
       try {
         if (new RegExp(rule.regexp).test(urlObj.href)) {
-          return rule.status ?? "disable";
+          return (rule.status ?? "disable") === "disable";
         }
       } catch { /* invalid regexp */ }
     }
   }
-  return "enable";
-}
-
-function isSiteDisabled(urlObj, rules) {
-  return checkSiteRule(urlObj, rules) === "disable";
+  return false;
 }
 
 // ========================================
