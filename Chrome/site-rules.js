@@ -89,14 +89,14 @@ function renderRules() {
     const insertTd = document.createElement("td");
     const insertBtn = document.createElement("button");
     insertBtn.className = "insert-rule";
-    insertBtn.textContent = "+";
+    insertBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
     insertTd.appendChild(insertBtn);
     tr.appendChild(insertTd);
 
     const deleteTd = document.createElement("td");
     const deleteBtn = document.createElement("button");
     deleteBtn.className = "delete-rule";
-    deleteBtn.textContent = "×";
+    deleteBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
     deleteTd.appendChild(deleteBtn);
     tr.appendChild(deleteTd);
 
@@ -138,8 +138,8 @@ function handleTableChange(event) {
 }
 
 function handleInsertRule(event) {
-  const target = event.target;
-  if (!target.classList.contains("insert-rule")) return;
+  const target = event.target.closest(".insert-rule");
+  if (!target) return;
   const tr = target.closest("tr[data-index]");
   if (!tr) return;
   const idx = parseInt(tr.dataset.index, 10);
@@ -150,8 +150,8 @@ function handleInsertRule(event) {
 }
 
 function handleDeleteRule(event) {
-  const target = event.target;
-  if (!target.classList.contains("delete-rule")) return;
+  const target = event.target.closest(".delete-rule");
+  if (!target) return;
   const tr = target.closest("tr[data-index]");
   if (!tr) return;
   const idx = parseInt(tr.dataset.index, 10);

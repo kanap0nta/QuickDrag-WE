@@ -138,7 +138,6 @@ body {
   text-decoration: none;
   color: inherit;
   cursor: pointer;
-  width: fit-content;
   border-radius: 4px;
   padding: 0.1em 0.3em;
 }
@@ -199,8 +198,28 @@ body {
   outline: none;
 }
 
+#site-rules-table td:nth-child(2),
+#site-rules-table td:nth-child(3) {
+  width: 1px;
+  white-space: nowrap;
+  padding: 0.3em 0.1em;
+}
+
 .delete-rule,
 .insert-rule {
-  font-size: 0.9em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25em;
+  background: none;
+  border: none;
+  border-radius: 3px;
   cursor: pointer;
+  color: #666;
+}
+
+.delete-rule:hover,
+.insert-rule:hover {
+  background-color: #EAEFF2;
+  color: #333;
 }

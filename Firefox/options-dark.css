@@ -45,6 +45,17 @@ body {
   color: #aaa;
 }
 
+.delete-rule,
+.insert-rule {
+  color: #aaa;
+}
+
+.delete-rule:hover,
+.insert-rule:hover {
+  background-color: #5a5a5a;
+  color: #fafafa;
+}
+
 .site-rules-page-header {
   color: #fafafa;
 }
