@@ -154,7 +154,7 @@ async function handleSave() {
       tr?.querySelector(".rule-pattern")?.classList.add("error");
     }
     if (errorEl) {
-      errorEl.textContent = (window._qdT && window._qdT.dup_pattern_error) || "Duplicate patterns found";
+      errorEl.textContent = (window._qdT && window._qdT.rule_dup_error) || "Duplicate patterns found";
     }
     return;
   }

@@ -33,11 +33,11 @@ body {
   padding: 0.5em 0;
 }
 
-.patterns-header:hover {
+.rule-header:hover {
   background-color: #5a5a5a;
 }
 
-.patterns-arrow {
+.rule-arrow {
   color: #aaa;
 }
 
