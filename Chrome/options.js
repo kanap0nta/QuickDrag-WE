@@ -172,18 +172,17 @@ function renderRules() {
     tr.appendChild(patternTd);
 
     const statusTd = document.createElement("td");
-    const statusSelect = document.createElement("select");
-    statusSelect.className = "rule-status";
-    const disableOpt = document.createElement("option");
-    disableOpt.value = "disable";
-    disableOpt.textContent = t("status_disable");
-    const enableOpt = document.createElement("option");
-    enableOpt.value = "enable";
-    enableOpt.textContent = t("status_enable");
-    statusSelect.appendChild(disableOpt);
-    statusSelect.appendChild(enableOpt);
-    statusSelect.value = rule.status ?? "disable";
-    statusTd.appendChild(statusSelect);
+    const toggleLabel = document.createElement("label");
+    toggleLabel.className = "toggle-switch";
+    const toggleInput = document.createElement("input");
+    toggleInput.type = "checkbox";
+    toggleInput.className = "rule-status";
+    toggleInput.checked = (rule.status ?? "disable") === "enable";
+    const toggleSlider = document.createElement("span");
+    toggleSlider.className = "toggle-slider";
+    toggleLabel.appendChild(toggleInput);
+    toggleLabel.appendChild(toggleSlider);
+    statusTd.appendChild(toggleLabel);
     tr.appendChild(statusTd);
 
     const deleteTd = document.createElement("td");
@@ -233,7 +232,8 @@ async function handleTableChange(event) {
   if (!tr) return;
   const idx = parseInt(tr.dataset.index, 10);
   if (isNaN(idx) || idx < 0 || idx >= compatibilityRules.length) return;
-  const rule = { ...compatibilityRules[idx], status: target.value };
+  const status = target.checked ? "enable" : "disable";
+  const rule = { ...compatibilityRules[idx], status };
   compatibilityRules[idx] = rule;
   await saveCompatibilityRules(compatibilityRules);
   updateSiteUI(compatibilityRules);

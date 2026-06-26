@@ -9,8 +9,11 @@
     <div id="setting-title" class="title"></div>
     <p></p>
     <section id="site-section">
-      <label>
-        <input type="checkbox" id="site-enabled" checked>
+      <label class="checkbox-row">
+        <span class="toggle-switch">
+          <input type="checkbox" id="site-enabled" checked>
+          <span class="toggle-slider"></span>
+        </span>
         <span id="site-enabled-label"></span>
       </label>
       <div id="current-site-info" class="current-site-info">
@@ -73,20 +76,32 @@
       </section>
       <p></p>
       <section class="data-types">
-        <label>
-          <input type="checkbox" checked="true" data-type="is_address_foreground"/>
+        <label class="checkbox-row">
+          <span class="toggle-switch">
+            <input type="checkbox" checked="true" data-type="is_address_foreground"/>
+            <span class="toggle-slider"></span>
+          </span>
           <span id="is-address-foreground"></span>
         </label>
-        <label>
-          <input type="checkbox" checked="true" data-type="is_search_foreground"/>
+        <label class="checkbox-row">
+          <span class="toggle-switch">
+            <input type="checkbox" checked="true" data-type="is_search_foreground"/>
+            <span class="toggle-slider"></span>
+          </span>
           <span id="is-search-foreground"></span>
         </label>
-        <label>
-          <input type="checkbox" checked="true" data-type="is_save_image"/>
+        <label class="checkbox-row">
+          <span class="toggle-switch">
+            <input type="checkbox" checked="true" data-type="is_save_image"/>
+            <span class="toggle-slider"></span>
+          </span>
           <span id="is-save-image"></span>
         </label>
-        <label>
-          <input type="checkbox" checked="true" data-type="is_prefer_save_image"/>
+        <label class="checkbox-row">
+          <span class="toggle-switch">
+            <input type="checkbox" checked="true" data-type="is_prefer_save_image"/>
+            <span class="toggle-slider"></span>
+          </span>
           <span id="is-prefer-save-image"></span>
         </label>
       </section>

@@ -25,8 +25,6 @@ const TRANSLATIONS = Object.freeze({
     add_rule: "Add rule",
     th_pattern: "Pattern",
     th_status: "Status",
-    status_disable: "Disable",
-    status_enable: "Enable",
   },
   "zh-CN": {
     setting_title: "QuickDrag 选项",
@@ -336,8 +334,6 @@ const TRANSLATIONS = Object.freeze({
     add_rule: "ルールを追加",
     th_pattern: "パターン",
     th_status: "状態",
-    status_disable: "無効",
-    status_enable: "有効",
   },
 });
 

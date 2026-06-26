@@ -8,12 +8,15 @@ body {
   font-weight: 300;
 }
 
-label {
-  display: block;
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
   padding: 0.5em 0;
+  cursor: pointer;
 }
 
-label:hover {
+.checkbox-row:hover {
   background-color: #EAEFF2;
 }
 
@@ -79,8 +82,54 @@ label:hover {
   font-size: 1em;
 }
 
-.rule-status {
-  font-size: 1em;
+.toggle-switch {
+  display: inline-block;
+  position: relative;
+  width: 34px;
+  height: 18px;
+  padding: 0;
+}
+
+.toggle-switch:hover {
+  background-color: transparent;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  border-radius: 18px;
+  transition: 0.2s;
+}
+
+.toggle-slider:before {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  border-radius: 50%;
+  transition: 0.2s;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+  background-color: #4a90e2;
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+  transform: translateX(16px);
 }
 
 .delete-rule {
