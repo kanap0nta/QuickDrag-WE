@@ -66,6 +66,13 @@ function renderRules() {
     patternTd.appendChild(patternInput);
     tr.appendChild(patternTd);
 
+    const insertTd = document.createElement("td");
+    const insertBtn = document.createElement("button");
+    insertBtn.className = "insert-rule";
+    insertBtn.textContent = "+";
+    insertTd.appendChild(insertBtn);
+    tr.appendChild(insertTd);
+
     const deleteTd = document.createElement("td");
     const deleteBtn = document.createElement("button");
     deleteBtn.className = "delete-rule";
@@ -95,6 +102,18 @@ function handleTableInput(event) {
   }
 }
 
+function handleInsertRule(event) {
+  const target = event.target;
+  if (!target.classList.contains("insert-rule")) return;
+  const tr = target.closest("tr[data-index]");
+  if (!tr) return;
+  const idx = parseInt(tr.dataset.index, 10);
+  if (isNaN(idx)) return;
+  compatibilityRules.splice(idx + 1, 0, { regexp: "", status: "disable" });
+  renderRules();
+  document.querySelector(`tr[data-index="${idx + 1}"]`)?.querySelector(".rule-pattern")?.focus();
+}
+
 function handleDeleteRule(event) {
   const target = event.target;
   if (!target.classList.contains("delete-rule")) return;
@@ -103,18 +122,16 @@ function handleDeleteRule(event) {
   const idx = parseInt(tr.dataset.index, 10);
   if (isNaN(idx) || idx < 0 || idx >= compatibilityRules.length) return;
   compatibilityRules.splice(idx, 1);
-  renderRules();
-}
-
-function handleAddRule() {
-  compatibilityRules.push({ regexp: "", status: "disable" });
+  if (compatibilityRules.length === 0) {
+    compatibilityRules = [{ regexp: "", status: "disable" }];
+  }
   renderRules();
 }
 
 async function handleSave() {
   const errorIndices = new Set();
-
   const emptyIndices = new Set();
+
   for (let i = 0; i < compatibilityRules.length; i++) {
     if (!(compatibilityRules[i].regexp ?? compatibilityRules[i].host ?? "").trim()) {
       emptyIndices.add(i);
@@ -170,6 +187,9 @@ async function handleSave() {
 
 async function initialize() {
   compatibilityRules = await loadCompatibilityRules();
+  if (compatibilityRules.length === 0) {
+    compatibilityRules = [{ regexp: "", status: "disable" }];
+  }
 
   try {
     const tabs = await browser.tabs.query({ active: true, currentWindow: true });
@@ -185,8 +205,8 @@ async function initialize() {
   renderRules();
 
   document.querySelector("#compat-tbody").addEventListener("input", handleTableInput);
+  document.querySelector("#compat-tbody").addEventListener("click", handleInsertRule);
   document.querySelector("#compat-tbody").addEventListener("click", handleDeleteRule);
-  document.querySelector("#add-rule").addEventListener("click", handleAddRule);
   document.querySelector("#save-btn").addEventListener("click", handleSave);
   document.querySelector("#back-btn").addEventListener("click", () => {
     window.location.href = "options.html";

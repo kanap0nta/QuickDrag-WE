@@ -32,11 +32,6 @@ body {
   padding: 0.5em 0;
 }
 
-.current-site-info {
-  font-size: 0.85em;
-  color: #666;
-  padding: 0.1em 0 0.1em 1.5em;
-}
 
 .patterns-header {
   display: flex;
@@ -225,12 +220,8 @@ body {
   outline: none;
 }
 
-.delete-rule {
+.delete-rule,
+.insert-rule {
   font-size: 0.9em;
   cursor: pointer;
-}
-
-#add-rule {
-  margin-top: 0.5em;
-  font-size: 0.9em;
 }

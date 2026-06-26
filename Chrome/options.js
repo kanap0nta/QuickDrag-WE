@@ -36,7 +36,6 @@ const elements = {
   get checkboxes() { return document.querySelectorAll(".data-types [type=checkbox]"); },
   get siteSection() { return document.querySelector("#site-section"); },
   get siteEnabled() { return document.querySelector("#site-enabled"); },
-  get currentHostnameEl() { return document.querySelector("#current-hostname"); },
   get mainOptions() { return document.querySelector("#main-options"); },
 };
 
@@ -260,7 +259,6 @@ async function initialize() {
       const url = new URL(tab.url);
       if (url.protocol === "http:" || url.protocol === "https:" || url.protocol === "file:") {
         currentUrlObj = url;
-        elements.currentHostnameEl.textContent = url.hostname;
         const siteDisabled = isSiteDisabled(currentUrlObj, compatibilityRules);
         elements.siteEnabled.checked = !siteDisabled;
         elements.mainOptions.hidden = siteDisabled;
