@@ -132,6 +132,99 @@ body {
   transform: translateX(16px);
 }
 
+.compat-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.5em 0;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.compat-nav-link:hover {
+  background-color: #EAEFF2;
+}
+
+.compat-nav-arrow {
+  margin-left: auto;
+  font-size: 0.85em;
+  color: #666;
+}
+
+.compat-page-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  margin-bottom: 0.2em;
+}
+
+.compat-page-header .title {
+  margin-bottom: 0;
+}
+
+.back-btn {
+  font-size: 1em;
+  cursor: pointer;
+  padding: 0.1em 0.5em;
+  background: none;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  line-height: 1.5;
+}
+
+.back-btn:hover {
+  background-color: #EAEFF2;
+}
+
+.compat-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  margin-top: 0.5em;
+}
+
+.save-btn {
+  margin-left: auto;
+  font-size: 0.9em;
+  padding: 0.3em 1em;
+  background-color: #4a90e2;
+  color: #fff;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.save-btn:hover {
+  background-color: #357abd;
+}
+
+.save-btn:disabled {
+  background-color: #888;
+  cursor: default;
+}
+
+#compat-tbody tr.rule-match {
+  background-color: #fff3cd;
+}
+
+#compat-tbody tr.rule-match .rule-pattern {
+  background-color: transparent;
+}
+
+.compat-error {
+  color: #c0392b;
+  font-size: 0.85em;
+  padding: 0.2em 0;
+  min-height: 1.2em;
+}
+
+.rule-pattern.error {
+  border-color: #c0392b;
+  background-color: #fff0ee;
+  outline: none;
+}
+
 .delete-rule {
   font-size: 0.9em;
   cursor: pointer;

@@ -45,6 +45,56 @@ body {
   color: #aaa;
 }
 
+.compat-nav-link {
+  color: #fafafa;
+}
+
+.compat-nav-link:hover {
+  background-color: #5a5a5a;
+}
+
+.compat-nav-arrow {
+  color: #aaa;
+}
+
+.back-btn {
+  border-color: #666;
+  color: #fafafa;
+}
+
+.back-btn:hover {
+  background-color: #5a5a5a;
+}
+
+.save-btn {
+  background-color: #5ba3f5;
+}
+
+.save-btn:hover {
+  background-color: #4a90e2;
+}
+
+.save-btn:disabled {
+  background-color: #666;
+}
+
+#compat-tbody tr.rule-match {
+  background-color: #4a3a10;
+}
+
+#compat-tbody tr.rule-match .rule-pattern {
+  background-color: transparent;
+}
+
+.compat-error {
+  color: #e74c3c;
+}
+
+.rule-pattern.error {
+  border-color: #e74c3c;
+  background-color: #4a2020;
+}
+
 .toggle-slider {
   background-color: #666;
 }

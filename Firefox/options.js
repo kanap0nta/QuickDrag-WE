@@ -37,11 +37,6 @@ const elements = {
   get siteSection() { return document.querySelector("#site-section"); },
   get siteEnabled() { return document.querySelector("#site-enabled"); },
   get currentHostnameEl() { return document.querySelector("#current-hostname"); },
-  get patternsHeader() { return document.querySelector("#patterns-header"); },
-  get patternsArrow() { return document.querySelector("#patterns-arrow"); },
-  get patternsContent() { return document.querySelector("#patterns-content"); },
-  get compatTbody() { return document.querySelector("#compat-tbody"); },
-  get addRuleBtn() { return document.querySelector("#add-rule"); },
   get mainOptions() { return document.querySelector("#main-options"); },
 };
 
@@ -120,24 +115,15 @@ async function saveCompatibilityRules(rules) {
   }
 }
 
-function checkCompatibility(urlObj, rules) {
-  for (const rule of rules) {
-    if (rule.host && rule.host === urlObj.host) {
-      return rule.status ?? "disable";
-    }
-    if (rule.regexp) {
-      try {
-        if (new RegExp(rule.regexp).test(urlObj.href)) {
-          return rule.status ?? "disable";
-        }
-      } catch { /* invalid regexp */ }
-    }
-  }
-  return "enable";
-}
-
 function isSiteDisabled(urlObj, rules) {
-  return checkCompatibility(urlObj, rules) === "disable";
+  return rules.some(rule => {
+    if (rule.host && rule.host === urlObj.host) return true;
+    if (rule.regexp) {
+      try { return new RegExp(rule.regexp).test(urlObj.href); }
+      catch { return false; }
+    }
+    return false;
+  });
 }
 
 function updateSiteUI(rules) {
@@ -145,119 +131,6 @@ function updateSiteUI(rules) {
   const nowDisabled = isSiteDisabled(currentUrlObj, rules);
   elements.siteEnabled.checked = !nowDisabled;
   elements.mainOptions.hidden = nowDisabled;
-}
-
-// ========================================
-// ルールテーブルの描画
-// ========================================
-
-function renderRules() {
-  const tbody = elements.compatTbody;
-  if (!tbody) return;
-  tbody.innerHTML = "";
-
-  for (let i = 0; i < compatibilityRules.length; i++) {
-    const rule = compatibilityRules[i];
-    const tr = document.createElement("tr");
-    tr.dataset.index = String(i);
-
-    const patternTd = document.createElement("td");
-    const patternInput = document.createElement("input");
-    patternInput.type = "text";
-    patternInput.className = "rule-pattern";
-    patternInput.value = rule.regexp ?? rule.host ?? "";
-    patternInput.spellcheck = false;
-    patternInput.placeholder = "^https?://example\\.com";
-    patternTd.appendChild(patternInput);
-    tr.appendChild(patternTd);
-
-    const statusTd = document.createElement("td");
-    const toggleLabel = document.createElement("label");
-    toggleLabel.className = "toggle-switch";
-    const toggleInput = document.createElement("input");
-    toggleInput.type = "checkbox";
-    toggleInput.className = "rule-status";
-    toggleInput.checked = (rule.status ?? "disable") === "enable";
-    const toggleSlider = document.createElement("span");
-    toggleSlider.className = "toggle-slider";
-    toggleLabel.appendChild(toggleInput);
-    toggleLabel.appendChild(toggleSlider);
-    statusTd.appendChild(toggleLabel);
-    tr.appendChild(statusTd);
-
-    const deleteTd = document.createElement("td");
-    const deleteBtn = document.createElement("button");
-    deleteBtn.className = "delete-rule";
-    deleteBtn.textContent = "×";
-    deleteTd.appendChild(deleteBtn);
-    tr.appendChild(deleteTd);
-
-    tbody.appendChild(tr);
-  }
-}
-
-// ========================================
-// テーブルイベントハンドラ
-// ========================================
-
-const debouncedSaveRule = debounce(async (idx, rule) => {
-  if (!(rule.regexp ?? "").trim() && !(rule.host ?? "").trim()) {
-    compatibilityRules.splice(idx, 1);
-    await saveCompatibilityRules(compatibilityRules);
-    renderRules();
-  } else {
-    compatibilityRules[idx] = rule;
-    await saveCompatibilityRules(compatibilityRules);
-  }
-  updateSiteUI(compatibilityRules);
-}, 500);
-
-async function handleTableInput(event) {
-  const target = event.target;
-  if (!target.classList.contains("rule-pattern")) return;
-  const tr = target.closest("tr[data-index]");
-  if (!tr) return;
-  const idx = parseInt(tr.dataset.index, 10);
-  if (isNaN(idx) || idx < 0 || idx >= compatibilityRules.length) return;
-  const rule = { ...compatibilityRules[idx] };
-  delete rule.host;
-  rule.regexp = target.value;
-  debouncedSaveRule(idx, rule);
-}
-
-async function handleTableChange(event) {
-  const target = event.target;
-  if (!target.classList.contains("rule-status")) return;
-  const tr = target.closest("tr[data-index]");
-  if (!tr) return;
-  const idx = parseInt(tr.dataset.index, 10);
-  if (isNaN(idx) || idx < 0 || idx >= compatibilityRules.length) return;
-  const status = target.checked ? "enable" : "disable";
-  const rule = { ...compatibilityRules[idx], status };
-  compatibilityRules[idx] = rule;
-  await saveCompatibilityRules(compatibilityRules);
-  updateSiteUI(compatibilityRules);
-}
-
-async function handleDeleteRule(event) {
-  const target = event.target;
-  if (!target.classList.contains("delete-rule")) return;
-  const tr = target.closest("tr[data-index]");
-  if (!tr) return;
-  const idx = parseInt(tr.dataset.index, 10);
-  if (isNaN(idx) || idx < 0 || idx >= compatibilityRules.length) return;
-  compatibilityRules.splice(idx, 1);
-  await saveCompatibilityRules(compatibilityRules);
-  renderRules();
-  updateSiteUI(compatibilityRules);
-}
-
-async function handleAddRule() {
-  compatibilityRules.push({ regexp: "", status: "disable" });
-  await saveCompatibilityRules(compatibilityRules);
-  renderRules();
-  elements.patternsContent.hidden = false;
-  elements.patternsArrow.textContent = "▼";
 }
 
 // ========================================
@@ -340,11 +213,8 @@ async function handleSiteToggle() {
       const escaped = currentUrlObj.hostname.replace(/[.+^${}()|[\]\\]/g, "\\$&");
       compatibilityRules.push({ regexp: `^https?://${escaped}(/.*)?$`, status: "disable" });
     }
-    elements.patternsContent.hidden = false;
-    elements.patternsArrow.textContent = "▼";
   } else {
     compatibilityRules = compatibilityRules.filter(rule => {
-      if ((rule.status ?? "disable") !== "disable") return true;
       if (rule.host && rule.host === currentUrlObj.host) return false;
       if (rule.regexp) {
         try {
@@ -353,19 +223,10 @@ async function handleSiteToggle() {
       }
       return true;
     });
-    elements.patternsContent.hidden = true;
-    elements.patternsArrow.textContent = "▶";
   }
 
   await saveCompatibilityRules(compatibilityRules);
-  renderRules();
   elements.mainOptions.hidden = !enabled;
-}
-
-function handlePatternsToggle() {
-  const content = elements.patternsContent;
-  content.hidden = !content.hidden;
-  elements.patternsArrow.textContent = content.hidden ? "▶" : "▼";
 }
 
 // ========================================
@@ -383,20 +244,6 @@ function setupEventListeners() {
   }
 
   elements.siteEnabled.addEventListener("change", handleSiteToggle);
-
-  elements.patternsHeader.addEventListener("click", handlePatternsToggle);
-  elements.patternsHeader.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      handlePatternsToggle();
-    }
-  });
-
-  elements.compatTbody.addEventListener("input", handleTableInput);
-  elements.compatTbody.addEventListener("change", handleTableChange);
-  elements.compatTbody.addEventListener("click", handleDeleteRule);
-
-  elements.addRuleBtn.addEventListener("click", handleAddRule);
 }
 
 // ========================================
@@ -417,10 +264,6 @@ async function initialize() {
         const siteDisabled = isSiteDisabled(currentUrlObj, compatibilityRules);
         elements.siteEnabled.checked = !siteDisabled;
         elements.mainOptions.hidden = siteDisabled;
-        if (siteDisabled) {
-          elements.patternsContent.hidden = false;
-          elements.patternsArrow.textContent = "▼";
-        }
       } else {
         elements.siteSection.hidden = true;
       }
@@ -430,8 +273,6 @@ async function initialize() {
   } catch {
     elements.siteSection.hidden = true;
   }
-
-  renderRules();
 
   await migrateCheckboxArray();
   const settings = await loadSettings();

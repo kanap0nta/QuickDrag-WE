@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="options.css">
+    <link rel="stylesheet" href="options-dark.css" media="(prefers-color-scheme: dark)">
+  </head>
+  <body>
+    <div class="compat-page-header">
+      <button id="back-btn" class="back-btn">←</button>
+      <div id="patterns-title" class="title"></div>
+    </div>
+    <p id="patterns-help" class="auto-save-notice"></p>
+    <table id="compat-table">
+      <thead>
+        <tr>
+          <th id="th-pattern"></th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="compat-tbody">
+      </tbody>
+    </table>
+    <p id="compat-error" class="compat-error"></p>
+    <div class="compat-actions">
+      <button id="add-rule"></button>
+      <button id="save-btn" class="save-btn"></button>
+    </div>
+    <script src="language.js"></script>
+    <script src="compat.js"></script>
+  </body>
+</html>
