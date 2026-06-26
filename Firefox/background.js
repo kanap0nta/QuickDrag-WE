@@ -47,7 +47,7 @@ async function handleMessage(request, sender, sendResponse) {
           if (urlObj.protocol !== "http:" && urlObj.protocol !== "https:" && urlObj.protocol !== "file:") {
             sendResponse({ disabled: false }); break;
           }
-          const rules = await getCompatibilityRules();
+          const rules = await getSiteRules();
           sendResponse({ disabled: isSiteDisabled(urlObj, rules) });
         } catch {
           sendResponse({ disabled: false });
@@ -199,7 +199,7 @@ async function downloadImage(request) {
   }
 }
 
-let cachedCompatibilityRules = null;
+let cachedSiteRules = null;
 
 function migrateOldPatterns(patterns) {
   return patterns
@@ -214,24 +214,24 @@ function migrateOldPatterns(patterns) {
     });
 }
 
-async function getCompatibilityRules() {
-  if (cachedCompatibilityRules !== null) return cachedCompatibilityRules;
-  const data = await browser.storage.local.get(["compatibilityRules", "disabledPatterns"]);
-  if (data.compatibilityRules !== undefined) {
-    cachedCompatibilityRules = data.compatibilityRules;
-    return cachedCompatibilityRules;
+async function getSiteRules() {
+  if (cachedSiteRules !== null) return cachedSiteRules;
+  const data = await browser.storage.local.get(["siteRules", "disabledPatterns"]);
+  if (data["siteRules"] !== undefined) {
+    cachedSiteRules = data["siteRules"];
+    return cachedSiteRules;
   }
   if (data.disabledPatterns && data.disabledPatterns.length > 0) {
-    cachedCompatibilityRules = migrateOldPatterns(data.disabledPatterns);
-    await browser.storage.local.set({ compatibilityRules: cachedCompatibilityRules });
+    cachedSiteRules = migrateOldPatterns(data.disabledPatterns);
+    await browser.storage.local.set({ "siteRules": cachedSiteRules });
     await browser.storage.local.remove("disabledPatterns");
   } else {
-    cachedCompatibilityRules = [];
+    cachedSiteRules = [];
   }
-  return cachedCompatibilityRules;
+  return cachedSiteRules;
 }
 
-function checkCompatibility(urlObj, rules) {
+function checkSiteRule(urlObj, rules) {
   for (const rule of rules) {
     if (rule.host && rule.host === urlObj.host) {
       return rule.status ?? "disable";
@@ -248,7 +248,7 @@ function checkCompatibility(urlObj, rules) {
 }
 
 function isSiteDisabled(urlObj, rules) {
-  return checkCompatibility(urlObj, rules) === "disable";
+  return checkSiteRule(urlObj, rules) === "disable";
 }
 
 // ========================================
@@ -289,7 +289,7 @@ async function updateTabIcon(tabId, url) {
   try {
     const urlObj = new URL(url);
     if (urlObj.protocol !== "http:" && urlObj.protocol !== "https:" && urlObj.protocol !== "file:") return;
-    const rules = await getCompatibilityRules();
+    const rules = await getSiteRules();
     const disabled = isSiteDisabled(urlObj, rules);
     if (disabled) {
       await browser.action.setIcon({ imageData: await getDisabledIconData(), tabId });
@@ -317,9 +317,9 @@ browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 });
 
 browser.storage.onChanged.addListener(async (changes, area) => {
-  if (area !== "local" || !changes.compatibilityRules) return;
-  const newValue = changes.compatibilityRules.newValue;
-  cachedCompatibilityRules = newValue !== undefined ? newValue : null;
+  if (area !== "local" || !changes["siteRules"]) return;
+  const newValue = changes["siteRules"].newValue;
+  cachedSiteRules = newValue !== undefined ? newValue : null;
   const tabs = await browser.tabs.query({});
   for (const tab of tabs) {
     await updateTabIcon(tab.id, tab.url);

@@ -33,39 +33,22 @@ body {
 }
 
 
-.rule-header {
-  display: flex;
-  align-items: center;
-  gap: 0.4em;
-  cursor: pointer;
-  padding: 0.5em 0;
-  user-select: none;
-}
 
-.rule-header:hover {
-  background-color: #EAEFF2;
-}
-
-.rule-arrow {
-  font-size: 0.7em;
-  color: #666;
-}
-
-#compat-table {
+#site-rules-table {
   width: 100%;
   border-collapse: collapse;
   margin: 0.3em 0;
   font-size: 0.85em;
 }
 
-#compat-table th,
-#compat-table td {
+#site-rules-table th,
+#site-rules-table td {
   text-align: left;
   padding: 0.3em 0.4em;
   border-bottom: 1px solid #ddd;
 }
 
-#compat-table th {
+#site-rules-table th {
   font-weight: bold;
   background: #f5f5f5;
 }
@@ -127,7 +110,7 @@ body {
   transform: translateX(16px);
 }
 
-.compat-nav-link {
+.site-rules-nav-link {
   display: flex;
   align-items: center;
   gap: 0.4em;
@@ -137,42 +120,38 @@ body {
   cursor: pointer;
 }
 
-.compat-nav-link:hover {
+.site-rules-nav-link:hover {
   background-color: #EAEFF2;
 }
 
-.compat-nav-arrow {
+.site-rules-nav-arrow {
   margin-left: auto;
   font-size: 0.85em;
   color: #666;
 }
 
-.compat-page-header {
+.site-rules-page-header {
   display: flex;
   align-items: center;
   gap: 0.5em;
   margin-bottom: 0.2em;
-}
-
-.compat-page-header .title {
-  margin-bottom: 0;
-}
-
-.back-btn {
-  font-size: 1em;
+  text-decoration: none;
+  color: inherit;
   cursor: pointer;
-  padding: 0.1em 0.5em;
-  background: none;
-  border: 1px solid #ccc;
-  border-radius: 3px;
-  line-height: 1.5;
+  width: fit-content;
+  border-radius: 4px;
+  padding: 0.1em 0.3em;
 }
 
-.back-btn:hover {
+.site-rules-page-header:hover {
   background-color: #EAEFF2;
 }
 
-.compat-actions {
+.site-rules-page-header .title {
+  margin-bottom: 0;
+}
+
+.site-rules-actions {
   display: flex;
   align-items: center;
   gap: 0.5em;
@@ -199,15 +178,15 @@ body {
   cursor: default;
 }
 
-#compat-tbody tr.rule-match {
+#site-rules-tbody tr.rule-match {
   background-color: #fff3cd;
 }
 
-#compat-tbody tr.rule-match .rule-pattern {
+#site-rules-tbody tr.rule-match .rule-pattern {
   background-color: transparent;
 }
 
-.compat-error {
+.site-rules-error {
   color: #c0392b;
   font-size: 0.85em;
   padding: 0.2em 0;

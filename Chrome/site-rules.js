@@ -2,9 +2,9 @@
 
 (() => {
 
-const RULES_STORAGE_KEY = "compatibilityRules";
+const RULES_STORAGE_KEY = "siteRules";
 
-let compatibilityRules = [];
+let siteRules = [];
 let currentUrlObj = null;
 
 function migrateOldPatterns(patterns) {
@@ -20,7 +20,7 @@ function migrateOldPatterns(patterns) {
     });
 }
 
-async function loadCompatibilityRules() {
+async function loadSiteRules() {
   try {
     const data = await chrome.storage.local.get([RULES_STORAGE_KEY, "disabledPatterns"]);
     if (data[RULES_STORAGE_KEY] !== undefined) {
@@ -38,12 +38,12 @@ async function loadCompatibilityRules() {
   }
 }
 
-async function saveCompatibilityRules(rules) {
+async function saveSiteRules(rules) {
   try {
     const toSave = rules.filter(r => (r.regexp ?? "").trim() || (r.host ?? "").trim());
     await chrome.storage.local.set({ [RULES_STORAGE_KEY]: toSave });
   } catch (error) {
-    console.error("Failed to save compatibility rules:", error);
+    console.error("Failed to save site rules:", error);
   }
 }
 
@@ -58,21 +58,21 @@ function matchesUrl(rule, urlObj) {
 
 function highlightMatchingRules() {
   if (!currentUrlObj) return;
-  for (const tr of document.querySelectorAll("#compat-tbody tr[data-index]")) {
+  for (const tr of document.querySelectorAll("#site-rules-tbody tr[data-index]")) {
     const idx = parseInt(tr.dataset.index, 10);
-    if (!isNaN(idx) && compatibilityRules[idx] && matchesUrl(compatibilityRules[idx], currentUrlObj)) {
+    if (!isNaN(idx) && siteRules[idx] && matchesUrl(siteRules[idx], currentUrlObj)) {
       tr.classList.add("rule-match");
     }
   }
 }
 
 function renderRules() {
-  const tbody = document.querySelector("#compat-tbody");
+  const tbody = document.querySelector("#site-rules-tbody");
   if (!tbody) return;
   tbody.innerHTML = "";
 
-  for (let i = 0; i < compatibilityRules.length; i++) {
-    const rule = compatibilityRules[i];
+  for (let i = 0; i < siteRules.length; i++) {
+    const rule = siteRules[i];
     const tr = document.createElement("tr");
     tr.dataset.index = String(i);
 
@@ -112,11 +112,11 @@ function handleTableInput(event) {
   const tr = target.closest("tr[data-index]");
   if (!tr) return;
   const idx = parseInt(tr.dataset.index, 10);
-  if (isNaN(idx) || idx < 0 || idx >= compatibilityRules.length) return;
-  compatibilityRules[idx] = { regexp: target.value, status: "disable" };
+  if (isNaN(idx) || idx < 0 || idx >= siteRules.length) return;
+  siteRules[idx] = { regexp: target.value, status: "disable" };
 
   target.classList.remove("error");
-  const errorEl = document.querySelector("#compat-error");
+  const errorEl = document.querySelector("#site-rules-error");
   if (errorEl && !document.querySelector(".rule-pattern.error")) {
     errorEl.textContent = "";
   }
@@ -129,8 +129,8 @@ function handleTableChange(event) {
   const tr = target.closest("tr[data-index]");
   if (!tr) return;
   const idx = parseInt(tr.dataset.index, 10);
-  if (isNaN(idx) || idx < 0 || idx >= compatibilityRules.length) return;
-  if (matchesUrl(compatibilityRules[idx], currentUrlObj)) {
+  if (isNaN(idx) || idx < 0 || idx >= siteRules.length) return;
+  if (matchesUrl(siteRules[idx], currentUrlObj)) {
     tr.classList.add("rule-match");
   } else {
     tr.classList.remove("rule-match");
@@ -144,7 +144,7 @@ function handleInsertRule(event) {
   if (!tr) return;
   const idx = parseInt(tr.dataset.index, 10);
   if (isNaN(idx)) return;
-  compatibilityRules.splice(idx + 1, 0, { regexp: "", status: "disable" });
+  siteRules.splice(idx + 1, 0, { regexp: "", status: "disable" });
   renderRules();
   document.querySelector(`tr[data-index="${idx + 1}"]`)?.querySelector(".rule-pattern")?.focus();
 }
@@ -155,10 +155,10 @@ function handleDeleteRule(event) {
   const tr = target.closest("tr[data-index]");
   if (!tr) return;
   const idx = parseInt(tr.dataset.index, 10);
-  if (isNaN(idx) || idx < 0 || idx >= compatibilityRules.length) return;
-  compatibilityRules.splice(idx, 1);
-  if (compatibilityRules.length === 0) {
-    compatibilityRules = [{ regexp: "", status: "disable" }];
+  if (isNaN(idx) || idx < 0 || idx >= siteRules.length) return;
+  siteRules.splice(idx, 1);
+  if (siteRules.length === 0) {
+    siteRules = [{ regexp: "", status: "disable" }];
   }
   renderRules();
 }
@@ -167,8 +167,8 @@ async function handleSave() {
   const seen = new Map();
   const duplicateIndices = new Set();
 
-  for (let i = 0; i < compatibilityRules.length; i++) {
-    const pattern = (compatibilityRules[i].regexp ?? compatibilityRules[i].host ?? "").trim();
+  for (let i = 0; i < siteRules.length; i++) {
+    const pattern = (siteRules[i].regexp ?? siteRules[i].host ?? "").trim();
     if (!pattern) continue;
     if (seen.has(pattern)) {
       duplicateIndices.add(seen.get(pattern));
@@ -181,7 +181,7 @@ async function handleSave() {
   for (const input of document.querySelectorAll(".rule-pattern.error")) {
     input.classList.remove("error");
   }
-  const errorEl = document.querySelector("#compat-error");
+  const errorEl = document.querySelector("#site-rules-error");
 
   if (duplicateIndices.size > 0) {
     for (const idx of duplicateIndices) {
@@ -195,10 +195,10 @@ async function handleSave() {
   }
 
   if (errorEl) errorEl.textContent = "";
-  await saveCompatibilityRules(compatibilityRules);
-  compatibilityRules = compatibilityRules.filter(r => (r.regexp ?? r.host ?? "").trim());
-  if (compatibilityRules.length === 0) {
-    compatibilityRules = [{ regexp: "", status: "disable" }];
+  await saveSiteRules(siteRules);
+  siteRules = siteRules.filter(r => (r.regexp ?? r.host ?? "").trim());
+  if (siteRules.length === 0) {
+    siteRules = [{ regexp: "", status: "disable" }];
   }
   renderRules();
   const btn = document.querySelector("#save-btn");
@@ -212,9 +212,9 @@ async function handleSave() {
 }
 
 async function initialize() {
-  compatibilityRules = await loadCompatibilityRules();
-  if (compatibilityRules.length === 0) {
-    compatibilityRules = [{ regexp: "", status: "disable" }];
+  siteRules = await loadSiteRules();
+  if (siteRules.length === 0) {
+    siteRules = [{ regexp: "", status: "disable" }];
   }
 
   try {
@@ -230,14 +230,11 @@ async function initialize() {
 
   renderRules();
 
-  document.querySelector("#compat-tbody").addEventListener("input", handleTableInput);
-  document.querySelector("#compat-tbody").addEventListener("change", handleTableChange);
-  document.querySelector("#compat-tbody").addEventListener("click", handleInsertRule);
-  document.querySelector("#compat-tbody").addEventListener("click", handleDeleteRule);
+  document.querySelector("#site-rules-tbody").addEventListener("input", handleTableInput);
+  document.querySelector("#site-rules-tbody").addEventListener("change", handleTableChange);
+  document.querySelector("#site-rules-tbody").addEventListener("click", handleInsertRule);
+  document.querySelector("#site-rules-tbody").addEventListener("click", handleDeleteRule);
   document.querySelector("#save-btn").addEventListener("click", handleSave);
-  document.querySelector("#back-btn").addEventListener("click", () => {
-    window.location.href = "options.html";
-  });
 }
 
 document.addEventListener("DOMContentLoaded", initialize);

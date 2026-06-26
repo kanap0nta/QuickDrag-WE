@@ -24,7 +24,7 @@ const STORAGE_KEYS = [
   "checkboxArray",
 ];
 
-const RULES_STORAGE_KEY = "compatibilityRules";
+const RULES_STORAGE_KEY = "siteRules";
 
 // ========================================
 // DOM要素の取得
@@ -61,7 +61,7 @@ async function loadSettings() {
 }
 
 let currentUrlObj = null;
-let compatibilityRules = [];
+let siteRules = [];
 
 function migrateOldPatterns(patterns) {
   return patterns
@@ -76,7 +76,7 @@ function migrateOldPatterns(patterns) {
     });
 }
 
-async function loadCompatibilityRules() {
+async function loadSiteRules() {
   try {
     const data = await browser.storage.local.get([RULES_STORAGE_KEY, "disabledPatterns"]);
     if (data[RULES_STORAGE_KEY] !== undefined) {
@@ -94,12 +94,12 @@ async function loadCompatibilityRules() {
   }
 }
 
-async function saveCompatibilityRules(rules) {
+async function saveSiteRules(rules) {
   try {
     const toSave = rules.filter(r => (r.regexp ?? "").trim() || (r.host ?? "").trim());
     await browser.storage.local.set({ [RULES_STORAGE_KEY]: toSave });
   } catch (error) {
-    console.error("Failed to save compatibility rules:", error);
+    console.error("Failed to save site rules:", error);
   }
 }
 
@@ -195,30 +195,26 @@ async function handleSiteToggle() {
   const enabled = elements.siteEnabled.checked;
 
   if (!enabled) {
-    if (!isSiteDisabled(currentUrlObj, compatibilityRules)) {
-      const escaped = currentUrlObj.hostname.replace(/[.+^${}()|[\]\\]/g, "\\$&");
-      compatibilityRules.push({ regexp: `^https?://${escaped}(/.*)?$`, status: "disable" });
+    if (!isSiteDisabled(currentUrlObj, siteRules)) {
+      const pathParts = currentUrlObj.pathname.split("/").filter(Boolean);
+      const stablePath = pathParts.length > 0 ? "/" + pathParts[0] : "";
+      const base = currentUrlObj.origin + stablePath;
+      const escaped = base.replace(/[.+^${}()|[\]\\]/g, "\\$&");
+      siteRules.push({ regexp: `^${escaped}(/.*)?(\\?.*)?$`, status: "disable" });
     }
   } else {
-    compatibilityRules = compatibilityRules.filter(rule => {
+    siteRules = siteRules.filter(rule => {
       if (rule.host) return rule.host !== currentUrlObj.host;
       if (rule.regexp) {
         try {
-          const re = new RegExp(rule.regexp);
-          if (!re.test(currentUrlObj.href)) return true;
-          if (currentUrlObj.protocol === "http:" || currentUrlObj.protocol === "https:") {
-            const canary = new URL(currentUrlObj.href);
-            canary.hostname = "canary-other-host.invalid";
-            if (re.test(canary.href)) return true;
-          }
-          return false;
+          return !new RegExp(rule.regexp).test(currentUrlObj.href);
         } catch { return true; }
       }
       return true;
     });
   }
 
-  await saveCompatibilityRules(compatibilityRules);
+  await saveSiteRules(siteRules);
   elements.mainOptions.hidden = !enabled;
 }
 
@@ -239,10 +235,10 @@ function setupEventListeners() {
   elements.siteEnabled.addEventListener("change", handleSiteToggle);
 
   browser.storage.onChanged.addListener((changes, area) => {
-    if (area !== "local" || !changes.compatibilityRules) return;
-    compatibilityRules = changes.compatibilityRules.newValue ?? [];
+    if (area !== "local" || !changes[RULES_STORAGE_KEY]) return;
+    siteRules = changes[RULES_STORAGE_KEY].newValue ?? [];
     if (currentUrlObj) {
-      const siteDisabled = isSiteDisabled(currentUrlObj, compatibilityRules);
+      const siteDisabled = isSiteDisabled(currentUrlObj, siteRules);
       elements.siteEnabled.checked = !siteDisabled;
       elements.mainOptions.hidden = siteDisabled;
     }
@@ -254,7 +250,7 @@ function setupEventListeners() {
 // ========================================
 
 async function initialize() {
-  compatibilityRules = await loadCompatibilityRules();
+  siteRules = await loadSiteRules();
 
   try {
     const tabs = await browser.tabs.query({ active: true, currentWindow: true });
@@ -263,7 +259,7 @@ async function initialize() {
       const url = new URL(tab.url);
       if (url.protocol === "http:" || url.protocol === "https:" || url.protocol === "file:") {
         currentUrlObj = url;
-        const siteDisabled = isSiteDisabled(currentUrlObj, compatibilityRules);
+        const siteDisabled = isSiteDisabled(currentUrlObj, siteRules);
         elements.siteEnabled.checked = !siteDisabled;
         elements.mainOptions.hidden = siteDisabled;
       } else {

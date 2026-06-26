@@ -6,12 +6,12 @@
     <link rel="stylesheet" href="options-dark.css" media="(prefers-color-scheme: dark)">
   </head>
   <body>
-    <div class="compat-page-header">
-      <button id="back-btn" class="back-btn">←</button>
+    <a href="options.html" class="site-rules-page-header">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
       <div id="rule-title" class="title"></div>
-    </div>
+    </a>
     <p id="rule-help" class="auto-save-notice"></p>
-    <table id="compat-table">
+    <table id="site-rules-table">
       <thead>
         <tr>
           <th id="rule-th"></th>
@@ -19,11 +19,11 @@
           <th></th>
         </tr>
       </thead>
-      <tbody id="compat-tbody">
+      <tbody id="site-rules-tbody">
       </tbody>
     </table>
-    <p id="compat-error" class="compat-error"></p>
-    <div class="compat-actions">
+    <p id="site-rules-error" class="site-rules-error"></p>
+    <div class="site-rules-actions">
       <button id="save-btn" class="save-btn"></button>
     </div>
     <script src="language.js"></script>

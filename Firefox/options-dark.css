@@ -33,32 +33,23 @@ body {
   padding: 0.5em 0;
 }
 
-.rule-header:hover {
-  background-color: #5a5a5a;
-}
-
-.rule-arrow {
-  color: #aaa;
-}
-
-.compat-nav-link {
+.site-rules-nav-link {
   color: #fafafa;
 }
 
-.compat-nav-link:hover {
+.site-rules-nav-link:hover {
   background-color: #5a5a5a;
 }
 
-.compat-nav-arrow {
+.site-rules-nav-arrow {
   color: #aaa;
 }
 
-.back-btn {
-  border-color: #666;
+.site-rules-page-header {
   color: #fafafa;
 }
 
-.back-btn:hover {
+.site-rules-page-header:hover {
   background-color: #5a5a5a;
 }
 
@@ -74,15 +65,15 @@ body {
   background-color: #666;
 }
 
-#compat-tbody tr.rule-match {
+#site-rules-tbody tr.rule-match {
   background-color: #4a3a10;
 }
 
-#compat-tbody tr.rule-match .rule-pattern {
+#site-rules-tbody tr.rule-match .rule-pattern {
   background-color: transparent;
 }
 
-.compat-error {
+.site-rules-error {
   color: #e74c3c;
 }
 
