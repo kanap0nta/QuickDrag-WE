@@ -199,11 +199,6 @@ async function downloadImage(request) {
   }
 }
 
-
-// ========================================
-// 互換性ルール管理 (GlitterDrag方式)
-// ========================================
-
 let cachedCompatibilityRules = null;
 
 function migrateOldPatterns(patterns) {
@@ -215,7 +210,7 @@ function migrateOldPatterns(patterns) {
       if (!p.includes("*") && !p.includes("/")) {
         return { regexp: `^https?://${escaped}(/.*)?$`, status: "disable" };
       }
-      return { regexp: `https?://${escaped}`, status: "disable" };
+      return { regexp: `^https?://${escaped}$`, status: "disable" };
     });
 }
 
@@ -323,7 +318,8 @@ browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 
 browser.storage.onChanged.addListener(async (changes, area) => {
   if (area !== "local" || !changes.compatibilityRules) return;
-  cachedCompatibilityRules = changes.compatibilityRules.newValue ?? [];
+  const newValue = changes.compatibilityRules.newValue;
+  cachedCompatibilityRules = newValue !== undefined ? newValue : null;
   const tabs = await browser.tabs.query({});
   for (const tab of tabs) {
     await updateTabIcon(tab.id, tab.url);

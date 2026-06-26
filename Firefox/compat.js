@@ -7,10 +7,32 @@ const RULES_STORAGE_KEY = "compatibilityRules";
 let compatibilityRules = [];
 let currentUrlObj = null;
 
+function migrateOldPatterns(patterns) {
+  return patterns
+    .map(p => p.trim())
+    .filter(p => p)
+    .map(p => {
+      const escaped = p.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
+      if (!p.includes("*") && !p.includes("/")) {
+        return { regexp: `^https?://${escaped}(/.*)?$`, status: "disable" };
+      }
+      return { regexp: `^https?://${escaped}$`, status: "disable" };
+    });
+}
+
 async function loadCompatibilityRules() {
   try {
-    const data = await browser.storage.local.get(RULES_STORAGE_KEY);
-    return data[RULES_STORAGE_KEY] ?? [];
+    const data = await browser.storage.local.get([RULES_STORAGE_KEY, "disabledPatterns"]);
+    if (data[RULES_STORAGE_KEY] !== undefined) {
+      return data[RULES_STORAGE_KEY];
+    }
+    if (data.disabledPatterns && data.disabledPatterns.length > 0) {
+      const rules = migrateOldPatterns(data.disabledPatterns);
+      await browser.storage.local.set({ [RULES_STORAGE_KEY]: rules });
+      await browser.storage.local.remove("disabledPatterns");
+      return rules;
+    }
+    return [];
   } catch {
     return [];
   }
@@ -18,9 +40,7 @@ async function loadCompatibilityRules() {
 
 async function saveCompatibilityRules(rules) {
   try {
-    const toSave = rules
-      .filter(r => (r.regexp ?? "").trim() || (r.host ?? "").trim())
-      .map(r => ({ regexp: r.regexp ?? r.host ?? "", status: "disable" }));
+    const toSave = rules.filter(r => (r.regexp ?? "").trim() || (r.host ?? "").trim());
     await browser.storage.local.set({ [RULES_STORAGE_KEY]: toSave });
   } catch (error) {
     console.error("Failed to save compatibility rules:", error);

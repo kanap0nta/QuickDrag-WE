@@ -40,13 +40,6 @@ const elements = {
 };
 
 // ========================================
-// 翻訳ヘルパー
-// ========================================
-function t(key) {
-  return (window._qdT && window._qdT[key]) || key;
-}
-
-// ========================================
 // ストレージ操作
 // ========================================
 
@@ -67,10 +60,6 @@ async function loadSettings() {
   }
 }
 
-// ========================================
-// 互換性ルール管理 (GlitterDrag方式)
-// ========================================
-
 let currentUrlObj = null;
 let compatibilityRules = [];
 
@@ -83,7 +72,7 @@ function migrateOldPatterns(patterns) {
       if (!p.includes("*") && !p.includes("/")) {
         return { regexp: `^https?://${escaped}(/.*)?$`, status: "disable" };
       }
-      return { regexp: `https?://${escaped}`, status: "disable" };
+      return { regexp: `^https?://${escaped}$`, status: "disable" };
     });
 }
 
@@ -212,11 +201,18 @@ async function handleSiteToggle() {
     }
   } else {
     compatibilityRules = compatibilityRules.filter(rule => {
-      if (rule.host && rule.host === currentUrlObj.host) return false;
+      if (rule.host) return rule.host !== currentUrlObj.host;
       if (rule.regexp) {
         try {
-          if (new RegExp(rule.regexp).test(currentUrlObj.href)) return false;
-        } catch { /* keep invalid regexps */ }
+          const re = new RegExp(rule.regexp);
+          if (!re.test(currentUrlObj.href)) return true;
+          if (currentUrlObj.protocol === "http:" || currentUrlObj.protocol === "https:") {
+            const canary = new URL(currentUrlObj.href);
+            canary.hostname = "canary-other-host.invalid";
+            if (re.test(canary.href)) return true;
+          }
+          return false;
+        } catch { return true; }
       }
       return true;
     });
@@ -241,6 +237,16 @@ function setupEventListeners() {
   }
 
   elements.siteEnabled.addEventListener("change", handleSiteToggle);
+
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== "local" || !changes.compatibilityRules) return;
+    compatibilityRules = changes.compatibilityRules.newValue ?? [];
+    if (currentUrlObj) {
+      const siteDisabled = isSiteDisabled(currentUrlObj, compatibilityRules);
+      elements.siteEnabled.checked = !siteDisabled;
+      elements.mainOptions.hidden = siteDisabled;
+    }
+  });
 }
 
 // ========================================
