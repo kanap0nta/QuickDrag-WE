@@ -115,21 +115,19 @@ async function saveCompatibilityRules(rules) {
 }
 
 function isSiteDisabled(urlObj, rules) {
-  return rules.some(rule => {
-    if (rule.host && rule.host === urlObj.host) return true;
-    if (rule.regexp) {
-      try { return new RegExp(rule.regexp).test(urlObj.href); }
-      catch { return false; }
+  for (const rule of rules) {
+    if (rule.host && rule.host === urlObj.host) {
+      return (rule.status ?? "disable") === "disable";
     }
-    return false;
-  });
-}
-
-function updateSiteUI(rules) {
-  if (!currentUrlObj) return;
-  const nowDisabled = isSiteDisabled(currentUrlObj, rules);
-  elements.siteEnabled.checked = !nowDisabled;
-  elements.mainOptions.hidden = nowDisabled;
+    if (rule.regexp) {
+      try {
+        if (new RegExp(rule.regexp).test(urlObj.href)) {
+          return (rule.status ?? "disable") === "disable";
+        }
+      } catch { /* invalid regexp */ }
+    }
+  }
+  return false;
 }
 
 // ========================================

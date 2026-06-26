@@ -129,26 +129,15 @@ function handleDeleteRule(event) {
 }
 
 async function handleSave() {
-  const errorIndices = new Set();
-  const emptyIndices = new Set();
-
-  for (let i = 0; i < compatibilityRules.length; i++) {
-    if (!(compatibilityRules[i].regexp ?? compatibilityRules[i].host ?? "").trim()) {
-      emptyIndices.add(i);
-      errorIndices.add(i);
-    }
-  }
-
   const seen = new Map();
   const duplicateIndices = new Set();
+
   for (let i = 0; i < compatibilityRules.length; i++) {
     const pattern = (compatibilityRules[i].regexp ?? compatibilityRules[i].host ?? "").trim();
     if (!pattern) continue;
     if (seen.has(pattern)) {
       duplicateIndices.add(seen.get(pattern));
       duplicateIndices.add(i);
-      errorIndices.add(seen.get(pattern));
-      errorIndices.add(i);
     } else {
       seen.set(pattern, i);
     }
@@ -159,22 +148,24 @@ async function handleSave() {
   }
   const errorEl = document.querySelector("#compat-error");
 
-  if (errorIndices.size > 0) {
-    for (const idx of errorIndices) {
+  if (duplicateIndices.size > 0) {
+    for (const idx of duplicateIndices) {
       const tr = document.querySelector(`tr[data-index="${idx}"]`);
       tr?.querySelector(".rule-pattern")?.classList.add("error");
     }
     if (errorEl) {
-      const msgs = [];
-      if (emptyIndices.size > 0) msgs.push((window._qdT && window._qdT.empty_pattern_error) || "Empty patterns found");
-      if (duplicateIndices.size > 0) msgs.push((window._qdT && window._qdT.dup_pattern_error) || "Duplicate patterns found");
-      errorEl.textContent = msgs.join(" / ");
+      errorEl.textContent = (window._qdT && window._qdT.dup_pattern_error) || "Duplicate patterns found";
     }
     return;
   }
 
   if (errorEl) errorEl.textContent = "";
   await saveCompatibilityRules(compatibilityRules);
+  compatibilityRules = compatibilityRules.filter(r => (r.regexp ?? r.host ?? "").trim());
+  if (compatibilityRules.length === 0) {
+    compatibilityRules = [{ regexp: "", status: "disable" }];
+  }
+  renderRules();
   const btn = document.querySelector("#save-btn");
   const original = btn.textContent;
   btn.textContent = (window._qdT && window._qdT.save_btn_done) || "Saved";

@@ -24,11 +24,9 @@ const TRANSLATIONS = Object.freeze({
     patterns_help: "Rules are checked in order; first match wins. Pattern: URL regexp (^https?://example\\.com) or hostname (example.com). Disable = stop QuickDrag. Enable = allow QuickDrag (overrides later Disable rules).",
     add_rule: "Add rule",
     th_pattern: "Pattern",
-    th_status: "Status",
     save_btn: "Save",
     save_btn_done: "Saved",
     dup_pattern_error: "Duplicate patterns found",
-    empty_pattern_error: "Empty patterns found",
   },
   "zh-CN": {
     setting_title: "QuickDrag 选项",
@@ -337,11 +335,9 @@ const TRANSLATIONS = Object.freeze({
     patterns_help: "ルールは順番にチェックされ、最初にマッチしたルールが適用されます。パターン: URL正規表現 (^https?://example\\.com) またはホスト名 (example.com)。無効=QuickDragを停止、有効=QuickDragを許可（後の無効ルールを上書き）。",
     add_rule: "ルールを追加",
     th_pattern: "パターン",
-    th_status: "状態",
     save_btn: "保存",
     save_btn_done: "保存しました",
     dup_pattern_error: "重複するパターンがあります",
-    empty_pattern_error: "空のパターンがあります",
   },
 });
 
@@ -369,7 +365,6 @@ const ELEMENT_MAPPINGS = Object.freeze({
     "patterns-title": "patterns_title",
     "patterns-help": "patterns_help",
     "th-pattern": "th_pattern",
-    "add-rule": "add_rule",
     "save-btn": "save_btn",
   },
 });
