@@ -122,6 +122,21 @@ function handleTableInput(event) {
   }
 }
 
+function handleTableChange(event) {
+  const target = event.target;
+  if (!target.classList.contains("rule-pattern")) return;
+  if (!currentUrlObj) return;
+  const tr = target.closest("tr[data-index]");
+  if (!tr) return;
+  const idx = parseInt(tr.dataset.index, 10);
+  if (isNaN(idx) || idx < 0 || idx >= compatibilityRules.length) return;
+  if (matchesUrl(compatibilityRules[idx], currentUrlObj)) {
+    tr.classList.add("rule-match");
+  } else {
+    tr.classList.remove("rule-match");
+  }
+}
+
 function handleInsertRule(event) {
   const target = event.target;
   if (!target.classList.contains("insert-rule")) return;
@@ -216,6 +231,7 @@ async function initialize() {
   renderRules();
 
   document.querySelector("#compat-tbody").addEventListener("input", handleTableInput);
+  document.querySelector("#compat-tbody").addEventListener("change", handleTableChange);
   document.querySelector("#compat-tbody").addEventListener("click", handleInsertRule);
   document.querySelector("#compat-tbody").addEventListener("click", handleDeleteRule);
   document.querySelector("#save-btn").addEventListener("click", handleSave);
