@@ -4,7 +4,8 @@
 
 ## インストール
 
-**Firefox**  
+### Firefox
+
 <https://addons.mozilla.org/ja/firefox/addon/quickdrag-we/>
 
 > **重要（Firefox のみ）**  
@@ -14,7 +15,8 @@
 >
 > これは Manifest V3 の制限によるもので、オフのままだとアドオンが動作しません。
 
-**Chrome / Edge**  
+### Chrome / Edge
+
 <https://chrome.google.com/webstore/detail/quickdrag-for-chrome/dmmpggjbbkfmldkfonjnpbdcmienbjil>
 
 ---
