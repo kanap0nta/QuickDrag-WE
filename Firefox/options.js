@@ -9,7 +9,7 @@ const DEFAULTS = Object.freeze({
   SEARCH_ENGINE: "google",
   SEARCH_ENGINE_URL: "https://www.google.com/search?q=",
   TAB_POSITION: "right",
-  CHECKBOX_ARRAY: [
+  TOGGLE_ARRAY: [
     "is_address_foreground",
     "is_search_foreground",
     "is_save_image",
@@ -33,7 +33,7 @@ const elements = {
   get engine() { return document.querySelector("#engine"); },
   get url() { return document.querySelector('[name="url"]'); },
   get tab() { return document.querySelector("#tab"); },
-  get checkboxes() { return document.querySelectorAll(".data-types [type=checkbox]"); },
+  get toggles() { return document.querySelectorAll(".data-types [type=checkbox]"); },
   get siteSection() { return document.querySelector("#site-section"); },
   get siteEnabled() { return document.querySelector("#site-enabled"); },
   get mainOptions() { return document.querySelector("#main-options"); },
@@ -115,15 +115,15 @@ function getCurrentSettings() {
     searchEngine: elements.engine.value,
     searchEngineURL: elements.url.value,
     tabPosition: elements.tab.value,
-    checkboxArray: getCheckedTypes(),
+    checkboxArray: getEnabledTypes(),
   };
 }
 
-function getCheckedTypes() {
+function getEnabledTypes() {
   const dataTypes = [];
-  for (const checkbox of elements.checkboxes) {
-    if (checkbox.checked) {
-      dataTypes.push(checkbox.getAttribute("data-type"));
+  for (const toggle of elements.toggles) {
+    if (toggle.checked) {
+      dataTypes.push(toggle.getAttribute("data-type"));
     }
   }
   return dataTypes;
@@ -138,10 +138,10 @@ function updateUI(settings) {
   elements.url.value = settings.searchEngineURL ?? DEFAULTS.SEARCH_ENGINE_URL;
   updateUrlReadOnly();
   elements.tab.value = settings.tabPosition ?? DEFAULTS.TAB_POSITION;
-  const checkboxArray = settings.checkboxArray ?? DEFAULTS.CHECKBOX_ARRAY;
-  for (const checkbox of elements.checkboxes) {
-    const dataType = checkbox.getAttribute("data-type");
-    checkbox.checked = checkboxArray.includes(dataType);
+  const toggleArray = settings.checkboxArray ?? DEFAULTS.TOGGLE_ARRAY;
+  for (const toggle of elements.toggles) {
+    const dataType = toggle.getAttribute("data-type");
+    toggle.checked = toggleArray.includes(dataType);
   }
 }
 
@@ -215,8 +215,8 @@ function setupEventListeners() {
   elements.url.addEventListener("change", handleSettingChange);
   elements.tab.addEventListener("change", handleSettingChange);
 
-  for (const checkbox of elements.checkboxes) {
-    checkbox.addEventListener("change", handleSettingChange);
+  for (const toggle of elements.toggles) {
+    toggle.addEventListener("change", handleSettingChange);
   }
 
   elements.siteEnabled.addEventListener("change", handleSiteToggle);
@@ -259,13 +259,13 @@ async function initialize() {
     elements.siteSection.hidden = true;
   }
 
-  await migrateCheckboxArray();
+  await migrateToggleArray();
   const settings = await loadSettings();
   updateUI(settings);
   setupEventListeners();
 }
 
-async function migrateCheckboxArray() {
+async function migrateToggleArray() {
   const data = await browser.storage.local.get("checkboxArray");
   const arr = data.checkboxArray;
   if (!Array.isArray(arr)) return;

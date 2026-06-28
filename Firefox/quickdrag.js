@@ -544,11 +544,11 @@ function updateSettings(storageData) {
   }
 
   if (storageData.checkboxArray !== undefined) {
-    const checkboxArray = storageData.checkboxArray;
-    settings.isAddressForeground = checkboxArray.includes("is_address_foreground") || checkboxArray.includes("is_address_forground");
-    settings.isSearchForeground = checkboxArray.includes("is_search_foreground") || checkboxArray.includes("is_search_forground");
-    settings.isSaveImage = checkboxArray.includes("is_save_image");
-    settings.isPreferSaveImage = checkboxArray.includes("is_prefer_save_image");
+    const toggleArray = storageData.checkboxArray;
+    settings.isAddressForeground = toggleArray.includes("is_address_foreground") || toggleArray.includes("is_address_forground");
+    settings.isSearchForeground = toggleArray.includes("is_search_foreground") || toggleArray.includes("is_search_forground");
+    settings.isSaveImage = toggleArray.includes("is_save_image");
+    settings.isPreferSaveImage = toggleArray.includes("is_prefer_save_image");
   }
 }
 
