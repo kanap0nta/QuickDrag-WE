@@ -2,179 +2,299 @@
 
 (() => {
 
-// ========================================
-// メッセージハンドラ
-// ========================================
+// ===== SiteRuleService =====
+// サイトルールのインメモリキャッシュを管理する。
+// キャッシュは storage.onChanged で invalidate() が呼ばれるまで保持され、毎回ストレージを読まない。
+class SiteRuleService {
+  #cache = null;
+  #regexpCache = new Map();
 
-/**
- * コンテンツスクリプトからのメッセージを処理
- */
-browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  handleMessage(request, sender, sendResponse);
-  return true;
-});
+  async getRules() {
+    if (this.#cache !== null) return this.#cache;
+    const data = await browser.storage.local.get(["siteRules", "disabledPatterns"]);
+    if (data["siteRules"] !== undefined) {
+      this.#cache = data["siteRules"];
+      return this.#cache;
+    }
+    // 旧形式が残っている場合は移行して新形式で保存する
+    if (data.disabledPatterns?.length > 0) {
+      this.#cache = this.#migrate(data.disabledPatterns);
+      await browser.storage.local.set({ "siteRules": this.#cache });
+      await browser.storage.local.remove("disabledPatterns");
+    } else {
+      this.#cache = [];
+    }
+    return this.#cache;
+  }
 
-/**
- * メッセージタイプに応じて処理を振り分け
- * @param {Object} request
- * @param {Object} sender
- * @param {Function} sendResponse
- */
-async function handleMessage(request, sender, sendResponse) {
-  try {
+  // storage.onChanged から新しい値を受け取りキャッシュを更新する。
+  // undefined（キーが削除された）の場合は null にして次回 getRules() で再ロードさせる
+  invalidate(newValue) {
+    this.#cache = newValue !== undefined ? newValue : null;
+    this.#regexpCache.clear();
+  }
+
+  // コンパイル済み RegExp をキャッシュして毎回の new RegExp() を省く
+  // 無効なパターンは null を格納し、呼び出しごとの例外発生も防ぐ
+  #getCompiledRegexp(pattern) {
+    if (!this.#regexpCache.has(pattern)) {
+      try { this.#regexpCache.set(pattern, new RegExp(pattern)); }
+      catch { this.#regexpCache.set(pattern, null); }
+    }
+    return this.#regexpCache.get(pattern);
+  }
+
+  // ルールを先頭から順に評価し、最初にマッチしたルールの status を返す。マッチなしは false
+  async isDisabled(urlObj) {
+    const rules = await this.getRules();
+    for (const rule of rules) {
+      if (rule.host && rule.host === urlObj.host) {
+        // status が省略された旧バージョンのルールは disable 扱いとする
+        return (rule.status ?? "disable") === "disable";
+      }
+      if (rule.regexp) {
+        const re = this.#getCompiledRegexp(rule.regexp);
+        if (re?.test(urlObj.href)) {
+          return (rule.status ?? "disable") === "disable";
+        }
+      }
+    }
+    return false;
+  }
+
+  // グロブ形式（* を含むパターン）と単純ホスト形式を regexp に変換する
+  #migrate(patterns) {
+    return patterns
+      .map(p => p.trim())
+      .filter(p => p)
+      .map(p => {
+        const escaped = p.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
+        if (!p.includes("*") && !p.includes("/")) {
+          return { regexp: `^https?://${escaped}(/.*)?$`, status: "disable" };
+        }
+        return { regexp: `^https?://${escaped}$`, status: "disable" };
+      });
+  }
+}
+
+// ===== TabNavigator =====
+// タブ位置文字列（right / left / first / last）を Firefox API のインデックスに変換して新規タブを開く。
+// Firefox コンテナタブ対応のため cookieStoreId を受け付け、opts に条件付きで追加する。
+class TabNavigator {
+  async open(url, position, isForeground, cookieStoreId) {
+    const tabs = await browser.tabs.query({ currentWindow: true });
+    const { index, openerTabId } = this.#calcPosition(position, tabs);
+    const opts = { url, active: isForeground };
+    // undefined のフィールドを渡すと Firefox API がエラーになるため条件付きで追加する
+    if (index !== undefined)        opts.index         = index;
+    if (openerTabId !== undefined)  opts.openerTabId   = openerTabId;
+    // cookieStoreId を引き継ぐことで、コンテナタブ内でのドラッグ操作が同じコンテナで開く
+    if (cookieStoreId !== undefined) opts.cookieStoreId = cookieStoreId;
+    await browser.tabs.create(opts);
+  }
+
+  // right / left はアクティブタブの index を基準に計算する
+  // openerTabId を設定すると「元タブに戻る」ボタンが機能する
+  #calcPosition(position, tabs) {
+    const active = tabs.find(t => t.active);
+    switch (position) {
+      case "right": return { index: active ? active.index + 1 : undefined, openerTabId: active?.id };
+      case "left":  return { index: active?.index, openerTabId: active?.id };
+      case "first": return { index: 0, openerTabId: undefined };
+      case "last":
+      default:      return { index: undefined, openerTabId: undefined };
+    }
+  }
+}
+
+// ===== DownloadManager =====
+// browser.downloads.download() を呼び出し、完了 / キャンセル / エラーを Promise で返す。
+class DownloadManager {
+  async download(url) {
+    try {
+      // saveAs が無効化された環境でもファイルが自動リネームされないよう overwrite を指定する
+      const downloadId = await browser.downloads.download({ url, saveAs: true, conflictAction: "overwrite" });
+      return new Promise((resolve, reject) => {
+        const onChanged = (delta) => {
+          if (delta.id !== downloadId) return;
+          if (delta.state?.current === "complete") {
+            browser.downloads.onChanged.removeListener(onChanged);
+            resolve(downloadId);
+          }
+          if (delta.state?.current === "interrupted") {
+            browser.downloads.onChanged.removeListener(onChanged);
+            const err = delta.error?.current || "Download interrupted";
+            // ユーザーがダイアログをキャンセルした場合は reject ではなく resolve(null) にする
+            if (err === "USER_CANCELED") resolve(null);
+            else reject(new Error(err));
+          }
+        };
+        browser.downloads.onChanged.addListener(onChanged);
+      });
+    } catch (error) {
+      // download() 呼び出し自体が拒否された場合（URL ブロック等）にブラウザが "canceled" を含むエラーを投げる
+      if (error.message?.includes("canceled")) return null;
+      throw error;
+    }
+  }
+}
+
+// ===== IconManager =====
+// サイトが無効化されているタブのアイコンをグレースケール半透明に変更する。
+// 無効化アイコンは一度生成したら #disabledCache に保持して再利用する。
+// Firefox は 128px アイコンを使用しないため 48 / 96 のみ生成する。
+class IconManager {
+  #disabledCache = null;
+  #ruleService;
+
+  constructor(ruleService) {
+    this.#ruleService = ruleService;
+  }
+
+  // http / https / file 以外のタブ（拡張機能ページ等）はアイコン変更をスキップする
+  async update(tabId, url) {
+    if (!url) return;
+    try {
+      const urlObj = new URL(url);
+      if (urlObj.protocol !== "http:" && urlObj.protocol !== "https:" && urlObj.protocol !== "file:") return;
+      if (await this.#ruleService.isDisabled(urlObj)) {
+        await browser.action.setIcon({ imageData: await this.#getDisabledData(), tabId });
+      } else {
+        await browser.action.setIcon({
+          path: { 48: "icons/icon_48.png", 96: "icons/icon_96.png" },
+          tabId,
+        });
+      }
+    } catch { /* ignore */ }
+  }
+
+  async updateAll() {
+    const tabs = await browser.tabs.query({});
+    for (const tab of tabs) await this.update(tab.id, tab.url);
+  }
+
+  // Firefox は 48 / 96 px のみ使用するため Chrome（48/96/128）より少ない
+  async #getDisabledData() {
+    if (!this.#disabledCache) {
+      this.#disabledCache = {
+        48: await this.#buildImageData(48),
+        96: await this.#buildImageData(96),
+      };
+    }
+    return this.#disabledCache;
+  }
+
+  // グレースケール変換に DOM への依存を避けるため OffscreenCanvas を使う
+  // 輝度係数 (0.299 / 0.587 / 0.114) は ITU-R BT.601 に準拠する
+  async #buildImageData(size) {
+    const response = await fetch(browser.runtime.getURL(`icons/icon_${size}.png`));
+    const blob     = await response.blob();
+    const bitmap   = await createImageBitmap(blob);
+    const canvas   = new OffscreenCanvas(size, size);
+    const ctx      = canvas.getContext("2d");
+    ctx.drawImage(bitmap, 0, 0);
+    bitmap.close();
+    const imageData = ctx.getImageData(0, 0, size, size);
+    const d = imageData.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const gray = Math.round(0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]);
+      d[i] = d[i + 1] = d[i + 2] = gray;
+      d[i + 3] = Math.round(d[i + 3] * 0.5);
+    }
+    return imageData;
+  }
+}
+
+// ===== MessageHandler =====
+// コンテンツスクリプトからのメッセージをタイプで振り分け、対応するサービスに委譲する。
+class MessageHandler {
+  #ruleService;
+  #navigator;
+  #downloader;
+
+  constructor(ruleService, navigator, downloader) {
+    this.#ruleService = ruleService;
+    this.#navigator   = navigator;
+    this.#downloader  = downloader;
+  }
+
+  async handle(request, sender) {
     switch (request.type) {
       case "searchURL":
-        await searchURL(request, sender);
-        sendResponse({ success: true, message: `searchURL: ${request.value}` });
-        break;
+        // コンテナタブからのドラッグは sender.tab.cookieStoreId を引き継いで同じコンテナで開く
+        await this.#navigator.open(request.value, request.tab, request.isForeground, sender.tab?.cookieStoreId);
+        return { success: true };
 
       case "downloadImage":
-        await downloadImage(request);
-        sendResponse({ success: true, message: `downloadImage: ${request.value}` });
-        break;
+        await this.#downloader.download(request.value);
+        return { success: true };
+
+      case "checkDisabled": {
+        // sender.tab がない（ポップアップやオプションページからの呼び出し）は無効化しない
+        const tabId = sender.tab?.id;
+        if (tabId === undefined) return { disabled: false };
+        try {
+          const tab = await browser.tabs.get(tabId);
+          if (!tab.url) return { disabled: false };
+          const urlObj = new URL(tab.url);
+          // moz-extension:// や about: などはサイトルールの対象外
+          if (urlObj.protocol !== "http:" && urlObj.protocol !== "https:" && urlObj.protocol !== "file:") {
+            return { disabled: false };
+          }
+          return { disabled: await this.#ruleService.isDisabled(urlObj) };
+        } catch {
+          return { disabled: false };
+        }
+      }
 
       default:
-        sendResponse({ success: false, message: "Unknown message type" });
-        break;
+        return { success: false, message: "Unknown message type" };
     }
-  } catch (error) {
-    sendResponse({ success: false, message: error.message });
   }
 }
 
-// ========================================
-// タブ操作
-// ========================================
+// ===== BackgroundController =====
+// バックグラウンドスクリプトのエントリポイント。全サービスをインスタンス化し、イベントリスナーを登録する。
+// SiteRuleService は IconManager と MessageHandler で共有される（同一キャッシュを参照する）。
+class BackgroundController {
+  #ruleService = new SiteRuleService();
+  #navigator   = new TabNavigator();
+  #downloader  = new DownloadManager();
+  #iconManager;
+  #msgHandler;
 
-/**
- * アクティブなタブの情報を取得
- * @param {Array} tabs
- * @returns {{openIndex: number, openId: number}|null}
- */
-function getActiveTabInfo(tabs) {
-  const activeTab = tabs.find((tab) => tab.active);
-  if (!activeTab) return null;
-
-  return {
-    openIndex: activeTab.index,
-    openId: activeTab.id,
-  };
-}
-
-/**
- * タブ位置に応じたインデックスを計算
- * @param {string} position
- * @param {Array} tabs
- * @returns {{index: number|undefined, openerTabId: number|undefined}}
- */
-function calculateTabPosition(position, tabs) {
-  const activeInfo = getActiveTabInfo(tabs);
-
-  switch (position) {
-    case "right":
-      return {
-        index: activeInfo ? activeInfo.openIndex + 1 : undefined,
-        openerTabId: activeInfo?.openId,
-      };
-
-    case "left":
-      return {
-        index: activeInfo?.openIndex,
-        openerTabId: activeInfo?.openId,
-      };
-
-    case "first":
-      return {
-        index: 0,
-        openerTabId: undefined,
-      };
-
-    case "last":
-    default:
-      return {
-        index: undefined,
-        openerTabId: undefined,
-      };
-  }
-}
-
-/**
- * 新しいタブでURLを開く
- * @param {Object} request
- * @param {Object} sender
- * @returns {Promise<void>}
- */
-async function searchURL(request, sender) {
-  const tabs = await browser.tabs.query({ currentWindow: true });
-  const { index, openerTabId } = calculateTabPosition(request.tab, tabs);
-
-  const createOptions = {
-    url: request.value,
-    cookieStoreId: sender.tab?.cookieStoreId,
-    active: request.isforground,
-  };
-
-  // undefinedでない場合のみ追加
-  if (index !== undefined) {
-    createOptions.index = index;
-  }
-  if (openerTabId !== undefined) {
-    createOptions.openerTabId = openerTabId;
+  constructor() {
+    this.#iconManager = new IconManager(this.#ruleService);
+    this.#msgHandler  = new MessageHandler(this.#ruleService, this.#navigator, this.#downloader);
   }
 
-  await browser.tabs.create(createOptions);
-}
-
-// ========================================
-// ダウンロード
-// ========================================
-
-/**
- * 画像をダウンロード
- * @param {Object} request
- * @returns {Promise<void>}
- */
-async function downloadImage(request) {
-  try {
-    const downloadId = await browser.downloads.download({
-      url: request.value,
-      saveAs: true,
-      conflictAction: "overwrite",
+  initialize() {
+    // Firefox の browser.runtime.onMessage は Promise を返すと非同期応答になる（Chrome の return true とは異なる）
+    browser.runtime.onMessage.addListener((request, sender) => {
+      return this.#msgHandler.handle(request, sender);
     });
 
-    // ダウンロード完了を監視
-    return new Promise((resolve, reject) => {
-      const onChanged = (delta) => {
-        if (delta.id !== downloadId) return;
-
-        // ダウンロード完了
-        if (delta.state?.current === "complete") {
-          browser.downloads.onChanged.removeListener(onChanged);
-          resolve(downloadId);
-        }
-
-        // ダウンロード中断（キャンセル含む）
-        if (delta.state?.current === "interrupted") {
-          browser.downloads.onChanged.removeListener(onChanged);
-          const errorMessage = delta.error?.current || "Download interrupted";
-          
-          if (errorMessage === "USER_CANCELED") {
-            resolve(null);
-          } else {
-            reject(new Error(errorMessage));
-          }
-        }
-      };
-
-      browser.downloads.onChanged.addListener(onChanged);
+    browser.tabs.onActivated.addListener(async ({ tabId }) => {
+      try {
+        const tab = await browser.tabs.get(tabId);
+        await this.#iconManager.update(tabId, tab.url);
+      } catch { /* ignore */ }
     });
-  } catch (error) {
-    // ダウンロード開始時のエラー（無効なURLなど）
-    if (error.message?.includes("canceled")) {
-      return null;
-    }
-    throw error;
+
+    browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+      if (changeInfo.url || changeInfo.status === "complete") {
+        await this.#iconManager.update(tabId, tab.url);
+      }
+    });
+
+    browser.storage.onChanged.addListener(async (changes, area) => {
+      if (area !== "local" || !changes["siteRules"]) return;
+      this.#ruleService.invalidate(changes["siteRules"].newValue);
+      await this.#iconManager.updateAll();
+    });
   }
 }
+
+new BackgroundController().initialize();
 
 })();

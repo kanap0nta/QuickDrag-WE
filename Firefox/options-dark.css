@@ -9,12 +9,15 @@ body {
   background-color: #434343;
 }
 
-label {
-  display: block;
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
   padding: 0.5em 0;
+  cursor: pointer;
 }
 
-label:hover {
+.checkbox-row:hover {
   background-color: #5a5a5a;
 }
 
@@ -24,12 +27,91 @@ label:hover {
   background: linear-gradient(transparent 95%, #7e7e7e 95%);
 }
 
-.url {
-  width: 100%;
-}
-
 .auto-save-notice {
   font-size: 0.85em;
   color: #aaa;
   padding: 0.5em 0;
+}
+
+.site-rules-nav-link {
+  color: #fafafa;
+}
+
+.site-rules-nav-link:hover {
+  background-color: #5a5a5a;
+}
+
+.site-rules-nav-arrow {
+  color: #aaa;
+}
+
+.delete-rule,
+.insert-rule {
+  color: #aaa;
+}
+
+.delete-rule:hover,
+.insert-rule:hover {
+  background-color: #5a5a5a;
+  color: #fafafa;
+}
+
+.site-rules-page-header {
+  color: #fafafa;
+}
+
+.site-rules-page-header:hover {
+  background-color: #5a5a5a;
+}
+
+.save-btn {
+  background-color: #5ba3f5;
+}
+
+.save-btn:hover {
+  background-color: #4a90e2;
+}
+
+.save-btn:disabled {
+  background-color: #666;
+}
+
+#site-rules-tbody tr.rule-match {
+  background-color: #8b6911;
+}
+
+#site-rules-tbody tr.rule-match .rule-pattern {
+  background-color: transparent;
+}
+
+.site-rules-error {
+  color: #e74c3c;
+}
+
+.rule-pattern.error {
+  border-color: #e74c3c;
+  background-color: #4a2020;
+}
+
+.toggle-slider {
+  background-color: #666;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+  background-color: #5ba3f5;
+}
+
+#site-rules-table th {
+  background: #555;
+}
+
+#site-rules-table th,
+#site-rules-table td {
+  border-bottom-color: #555;
+}
+
+.rule-pattern {
+  background-color: #555;
+  color: #fafafa;
+  border-color: #666;
 }

@@ -8,12 +8,16 @@ body {
   font-weight: 300;
 }
 
-label {
-  display: block;
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
   padding: 0.5em 0;
+  cursor: pointer;
+  user-select: none;
 }
 
-label:hover {
+.checkbox-row:hover {
   background-color: #EAEFF2;
 }
 
@@ -23,12 +27,208 @@ label:hover {
   background: linear-gradient(transparent 95%, #7e7e7e 95%);
 }
 
-.url {
-  width: 100%;
-}
-
 .auto-save-notice {
   font-size: 0.85em;
   color: #666;
   padding: 0.5em 0;
+}
+
+section {
+  margin-top: 0.8em;
+}
+
+#main-options > .auto-save-notice {
+  margin-top: 0.8em;
+}
+
+
+
+#site-rules-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.3em 0;
+  font-size: 0.85em;
+}
+
+#site-rules-table th,
+#site-rules-table td {
+  text-align: left;
+  padding: 0.3em 0.4em;
+  border-bottom: 1px solid #ddd;
+}
+
+#site-rules-table th {
+  font-weight: bold;
+  background: #f5f5f5;
+}
+
+.rule-pattern {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: monospace;
+  font-size: 1em;
+}
+
+.toggle-switch {
+  display: inline-block;
+  position: relative;
+  width: 34px;
+  height: 18px;
+  padding: 0;
+}
+
+.toggle-switch:hover {
+  background-color: transparent;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  border-radius: 18px;
+  transition: 0.1s;
+}
+
+.toggle-slider:before {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  border-radius: 50%;
+  transition: 0.1s;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+  background-color: #4a90e2;
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+  transform: translateX(16px);
+}
+
+.site-rules-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.5em 0;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.site-rules-nav-link:hover {
+  background-color: #EAEFF2;
+}
+
+.site-rules-nav-arrow {
+  margin-left: auto;
+  font-size: 0.85em;
+  color: #666;
+}
+
+.site-rules-page-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  margin-bottom: 0.2em;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 0.1em 0.3em;
+}
+
+.site-rules-page-header:hover {
+  background-color: #EAEFF2;
+}
+
+.site-rules-page-header .title {
+  margin-bottom: 0;
+}
+
+.site-rules-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  margin-top: 0.5em;
+}
+
+.save-btn {
+  margin-left: auto;
+  font-size: 0.9em;
+  padding: 0.3em 1em;
+  background-color: #4a90e2;
+  color: #fff;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.save-btn:hover {
+  background-color: #357abd;
+}
+
+.save-btn:disabled {
+  background-color: #888;
+  cursor: default;
+}
+
+#site-rules-tbody tr.rule-match {
+  background-color: #fff3cd;
+}
+
+#site-rules-tbody tr.rule-match .rule-pattern {
+  background-color: transparent;
+}
+
+.site-rules-error {
+  color: #c0392b;
+  font-size: 0.85em;
+  padding: 0.2em 0;
+  min-height: 1.2em;
+}
+
+.rule-pattern.error {
+  border-color: #c0392b;
+  background-color: #fff0ee;
+  outline: none;
+}
+
+#site-rules-table td:nth-child(2),
+#site-rules-table td:nth-child(3) {
+  width: 1px;
+  white-space: nowrap;
+  padding: 0.3em 0.1em;
+}
+
+.delete-rule,
+.insert-rule {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25em;
+  background: none;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  color: #666;
+}
+
+.delete-rule:hover,
+.insert-rule:hover {
+  background-color: #EAEFF2;
+  color: #333;
 }
