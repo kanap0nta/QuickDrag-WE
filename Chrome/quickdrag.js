@@ -1,739 +1,420 @@
 "use strict";
 
 (() => {
-// ========================================
-// 定数
-// ========================================
-const DEFAULTS = Object.freeze({
-  ENGINE_URL: "https://www.google.com/search?q=",
-  NEW_TAB_POSITION: "right",
-  IS_ADDRESS_FOREGROUND: true,
-  IS_SEARCH_FOREGROUND: true,
-  IS_SAVE_IMAGE: true,
-  IS_PREFER_SAVE_IMAGE: true,
-});
 
-const MESSAGE_TYPE = Object.freeze({
-  SET_STR: "quickdrag_we_set_str",
-  DOWNLOAD: "downloadImage",
-  SEARCH: "searchURL",
-});
-
-// ========================================
-// 状態管理
-// ========================================
-const state = {
-  selectStr: "",
-  isImage: false,
-  isBase64: false,
-  isAddressSearch: false,
-};
-
-const settings = {
-  engineURL: DEFAULTS.ENGINE_URL,
-  newTabPosition: DEFAULTS.NEW_TAB_POSITION,
-  isAddressForeground: DEFAULTS.IS_ADDRESS_FOREGROUND,
-  isSearchForeground: DEFAULTS.IS_SEARCH_FOREGROUND,
-  isSaveImage: DEFAULTS.IS_SAVE_IMAGE,
-  isPreferSaveImage: DEFAULTS.IS_PREFER_SAVE_IMAGE,
-};
-
-let isActive = false;
-let origPushState = null;
-let origReplaceState = null;
-
-// ========================================
-// 正規表現パターン
-// ========================================
-const PATTERNS = {
-  // RFC3986準拠URIパターン
-  RFC3986: /^[a-z]([a-z]|[0-9]|[+\-.])*:(\/\/((([a-z]|[0-9]|[-._~])|%[0-9a-f][0-9a-f]|[!$&'()*+,;=]|:)*@)?(\[((([0-9a-f]{1,4}:){6}([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|::([0-9a-f]{1,4}:){5}([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|([0-9a-f]{1,4})?::([0-9a-f]{1,4}:){4}([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|(([0-9a-f]{1,4}:){0,1}[0-9a-f]{1,4})?::([0-9a-f]{1,4}:){3}([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|(([0-9a-f]{1,4}:){0,2}[0-9a-f]{1,4})?::([0-9a-f]{1,4}:){2}([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|(([0-9a-f]{1,4}:){0,3}[0-9a-f]{1,4})?::[0-9a-f]{1,4}:([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|(([0-9a-f]{1,4}:){0,4}[0-9a-f]{1,4})?::([0-9a-f]{1,4}:[0-9a-f]{1,4}|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3})|(([0-9a-f]{1,4}:){0,5}[0-9a-f]{1,4})?::[0-9a-f]{1,4}|(([0-9a-f]{1,4}:){0,6}[0-9a-f]{1,4})?::)|v[0-9a-f]+\.(([a-z]|[0-9]|[-._~])|[!$&'()*+,;=]|:)+)]|([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])){3}|(([a-z]|[0-9]|[-._~])|%[0-9a-f][0-9a-f]|[!$&'()*+,;=])*)(:\d*)?(\/((([a-z]|[0-9]|[-._~])|%[0-9a-f][0-9a-f]|[!$&'()*+,;=]|[:@]))*)*|\/(((([a-z]|[0-9]|[-._~])|%[0-9a-f][0-9a-f]|[!$&'()*+,;=]|[:@]))+(\/((([a-z]|[0-9]|[-._~])|%[0-9a-f][0-9a-f]|[!$&'()*+,;=]|[:@]))*)*)?|((([a-z]|[0-9]|[-._~])|%[0-9a-f][0-9a-f]|[!$&'()*+,;=]|[:@]))+(\/((([a-z]|[0-9]|[-._~])|%[0-9a-f][0-9a-f]|[!$&'()*+,;=]|[:@]))*)*|)(\?((([a-z]|[0-9]|[-._~])|%[0-9a-f][0-9a-f]|[!$&'()*+,;=]|[:@])|[\/?])*)?(#((([a-z]|[0-9]|[-._~])|%[0-9a-f][0-9a-f]|[!$&'()*+,;=]|[:@])|[\/?])*)?$/i,
-
-  // スキーム判定
-  SCHEME: /^(?:(?:( +)?h?tt|hxx)ps?|ftp|chrome|file):\/\//i,
-
-  // メールアドレス判定
-  EMAIL: /^[\w.+-]+@[\w.-]+\.[\w-]{2,}$/,
-
-  // 不正なスキーム修正用
-  MALFORMED_HTTP: /^(?:t?t|h[tx]{2,})p(s?:\/\/)/i,
-
-  // 先頭の不要文字除去
-  LEADING_JUNK: /^:*[/\\\s]*/,
-
-  // FTPパス判定
-  FTP_PATH: /^ht(tp:\/\/ftp\.)/i,
-
-  // Base64データURI判定
-  DATA_URI: /^data:image\/[^;]+;base64,/i,
-};
-
-// TLDリスト（ https://data.iana.org/TLD/tlds-alpha-by-domain.txt （Version 2025101800）+ example|invalid|localhost|internal|test|onion）
-const TLD_LIST = "AAA|AARP|ABB|ABBOTT|ABBVIE|ABC|ABLE|ABOGADO|ABUDHABI|AC|ACADEMY|ACCENTURE|ACCOUNTANT|ACCOUNTANTS|ACO|ACTOR|AD|ADS|ADULT|AE|AEG|AERO|AETNA|AF|AFL|AFRICA|AG|AGAKHAN|AGENCY|AI|AIG|AIRBUS|AIRFORCE|AIRTEL|AKDN|AL|ALIBABA|ALIPAY|ALLFINANZ|ALLSTATE|ALLY|ALSACE|ALSTOM|AM|AMAZON|AMERICANEXPRESS|AMERICANFAMILY|AMEX|AMFAM|AMICA|AMSTERDAM|ANALYTICS|ANDROID|ANQUAN|ANZ|AO|AOL|APARTMENTS|APP|APPLE|AQ|AQUARELLE|AR|ARAB|ARAMCO|ARCHI|ARMY|ARPA|ART|ARTE|AS|ASDA|ASIA|ASSOCIATES|AT|ATHLETA|ATTORNEY|AU|AUCTION|AUDI|AUDIBLE|AUDIO|AUSPOST|AUTHOR|AUTO|AUTOS|AW|AWS|AX|AXA|AZ|AZURE|BA|BABY|BAIDU|BANAMEX|BAND|BANK|BAR|BARCELONA|BARCLAYCARD|BARCLAYS|BAREFOOT|BARGAINS|BASEBALL|BASKETBALL|BAUHAUS|BAYERN|BB|BBC|BBT|BBVA|BCG|BCN|BD|BE|BEATS|BEAUTY|BEER|BERLIN|BEST|BESTBUY|BET|BF|BG|BH|BHARTI|BI|BIBLE|BID|BIKE|BING|BINGO|BIO|BIZ|BJ|BLACK|BLACKFRIDAY|BLOCKBUSTER|BLOG|BLOOMBERG|BLUE|BM|BMS|BMW|BN|BNPPARIBAS|BO|BOATS|BOEHRINGER|BOFA|BOM|BOND|BOO|BOOK|BOOKING|BOSCH|BOSTIK|BOSTON|BOT|BOUTIQUE|BOX|BR|BRADESCO|BRIDGESTONE|BROADWAY|BROKER|BROTHER|BRUSSELS|BS|BT|BUILD|BUILDERS|BUSINESS|BUY|BUZZ|BV|BW|BY|BZ|BZH|CA|CAB|CAFE|CAL|CALL|CALVINKLEIN|CAM|CAMERA|CAMP|CANON|CAPETOWN|CAPITAL|CAPITALONE|CAR|CARAVAN|CARDS|CARE|CAREER|CAREERS|CARS|CASA|CASE|CASH|CASINO|CAT|CATERING|CATHOLIC|CBA|CBN|CBRE|CC|CD|CENTER|CEO|CERN|CF|CFA|CFD|CG|CH|CHANEL|CHANNEL|CHARITY|CHASE|CHAT|CHEAP|CHINTAI|CHRISTMAS|CHROME|CHURCH|CI|CIPRIANI|CIRCLE|CISCO|CITADEL|CITI|CITIC|CITY|CK|CL|CLAIMS|CLEANING|CLICK|CLINIC|CLINIQUE|CLOTHING|CLOUD|CLUB|CLUBMED|CM|CN|CO|COACH|CODES|COFFEE|COLLEGE|COLOGNE|COM|COMMBANK|COMMUNITY|COMPANY|COMPARE|COMPUTER|COMSEC|CONDOS|CONSTRUCTION|CONSULTING|CONTACT|CONTRACTORS|COOKING|COOL|COOP|CORSICA|COUNTRY|COUPON|COUPONS|COURSES|CPA|CR|CREDIT|CREDITCARD|CREDITUNION|CRICKET|CROWN|CRS|CRUISE|CRUISES|CU|CUISINELLA|CV|CW|CX|CY|CYMRU|CYOU|CZ|DAD|DANCE|DATA|DATE|DATING|DATSUN|DAY|DCLK|DDS|DE|DEAL|DEALER|DEALS|DEGREE|DELIVERY|DELL|DELOITTE|DELTA|DEMOCRAT|DENTAL|DENTIST|DESI|DESIGN|DEV|DHL|DIAMONDS|DIET|DIGITAL|DIRECT|DIRECTORY|DISCOUNT|DISCOVER|DISH|DIY|DJ|DK|DM|DNP|DO|DOCS|DOCTOR|DOG|DOMAINS|DOT|DOWNLOAD|DRIVE|DTV|DUBAI|DUNLOP|DUPONT|DURBAN|DVAG|DVR|DZ|EARTH|EAT|EC|ECO|EDEKA|EDU|EDUCATION|EE|EG|EMAIL|EMERCK|ENERGY|ENGINEER|ENGINEERING|ENTERPRISES|EPSON|EQUIPMENT|ER|ERICSSON|ERNI|ES|ESQ|ESTATE|ET|EU|EUROVISION|EUS|EVENTS|EXCHANGE|EXPERT|EXPOSED|EXPRESS|EXTRASPACE|FAGE|FAIL|FAIRWINDS|FAITH|FAMILY|FAN|FANS|FARM|FARMERS|FASHION|FAST|FEDEX|FEEDBACK|FERRARI|FERRERO|FI|FIDELITY|FIDO|FILM|FINAL|FINANCE|FINANCIAL|FIRE|FIRESTONE|FIRMDALE|FISH|FISHING|FIT|FITNESS|FJ|FK|FLICKR|FLIGHTS|FLIR|FLORIST|FLOWERS|FLY|FM|FO|FOO|FOOD|FOOTBALL|FORD|FOREX|FORSALE|FORUM|FOUNDATION|FOX|FR|FREE|FRESENIUS|FRL|FROGANS|FRONTIER|FTR|FUJITSU|FUN|FUND|FURNITURE|FUTBOL|FYI|GA|GAL|GALLERY|GALLO|GALLUP|GAME|GAMES|GAP|GARDEN|GAY|GB|GBIZ|GD|GDN|GE|GEA|GENT|GENTING|GEORGE|GF|GG|GGEE|GH|GI|GIFT|GIFTS|GIVES|GIVING|GL|GLASS|GLE|GLOBAL|GLOBO|GM|GMAIL|GMBH|GMO|GMX|GN|GODADDY|GOLD|GOLDPOINT|GOLF|GOO|GOODYEAR|GOOG|GOOGLE|GOP|GOT|GOV|GP|GQ|GR|GRAINGER|GRAPHICS|GRATIS|GREEN|GRIPE|GROCERY|GROUP|GS|GT|GU|GUCCI|GUGE|GUIDE|GUITARS|GURU|GW|GY|HAIR|HAMBURG|HANGOUT|HAUS|HBO|HDFC|HDFCBANK|HEALTH|HEALTHCARE|HELP|HELSINKI|HERE|HERMES|HIPHOP|HISAMITSU|HITACHI|HIV|HK|HKT|HM|HN|HOCKEY|HOLDINGS|HOLIDAY|HOMEDEPOT|HOMEGOODS|HOMES|HOMESENSE|HONDA|HORSE|HOSPITAL|HOST|HOSTING|HOT|HOTELS|HOTMAIL|HOUSE|HOW|HR|HSBC|HT|HU|HUGHES|HYATT|HYUNDAI|IBM|ICBC|ICE|ICU|ID|IE|IEEE|IFM|IKANO|IL|IM|IMAMAT|IMDB|IMMO|IMMOBILIEN|IN|INC|INDUSTRIES|INFINITI|INFO|ING|INK|INSTITUTE|INSURANCE|INSURE|INT|INTERNATIONAL|INTUIT|INVESTMENTS|IO|IPIRANGA|IQ|IR|IRISH|IS|ISMAILI|IST|ISTANBUL|IT|ITAU|ITV|JAGUAR|JAVA|JCB|JE|JEEP|JETZT|JEWELRY|JIO|JLL|JM|JMP|JNJ|JO|JOBS|JOBURG|JOT|JOY|JP|JPMORGAN|JPRS|JUEGOS|JUNIPER|KAUFEN|KDDI|KE|KERRYHOTELS|KERRYPROPERTIES|KFH|KG|KH|KI|KIA|KIDS|KIM|KINDLE|KITCHEN|KIWI|KM|KN|KOELN|KOMATSU|KOSHER|KP|KPMG|KPN|KR|KRD|KRED|KUOKGROUP|KW|KY|KYOTO|KZ|LA|LACAIXA|LAMBORGHINI|LAMER|LAND|LANDROVER|LANXESS|LASALLE|LAT|LATINO|LATROBE|LAW|LAWYER|LB|LC|LDS|LEASE|LECLERC|LEFRAK|LEGAL|LEGO|LEXUS|LGBT|LI|LIDL|LIFE|LIFEINSURANCE|LIFESTYLE|LIGHTING|LIKE|LILLY|LIMITED|LIMO|LINCOLN|LINK|LIVE|LIVING|LK|LLC|LLP|LOAN|LOANS|LOCKER|LOCUS|LOL|LONDON|LOTTE|LOTTO|LOVE|LPL|LPLFINANCIAL|LR|LS|LT|LTD|LTDA|LU|LUNDBECK|LUXE|LUXURY|LV|LY|MA|MADRID|MAIF|MAISON|MAKEUP|MAN|MANAGEMENT|MANGO|MAP|MARKET|MARKETING|MARKETS|MARRIOTT|MARSHALLS|MATTEL|MBA|MC|MCKINSEY|MD|ME|MED|MEDIA|MEET|MELBOURNE|MEME|MEMORIAL|MEN|MENU|MERCKMSD|MG|MH|MIAMI|MICROSOFT|MIL|MINI|MINT|MIT|MITSUBISHI|MK|ML|MLB|MLS|MM|MMA|MN|MO|MOBI|MOBILE|MODA|MOE|MOI|MOM|MONASH|MONEY|MONSTER|MORMON|MORTGAGE|MOSCOW|MOTO|MOTORCYCLES|MOV|MOVIE|MP|MQ|MR|MS|MSD|MT|MTN|MTR|MU|MUSEUM|MUSIC|MV|MW|MX|MY|MZ|NA|NAB|NAGOYA|NAME|NAVY|NBA|NC|NE|NEC|NET|NETBANK|NETFLIX|NETWORK|NEUSTAR|NEW|NEWS|NEXT|NEXTDIRECT|NEXUS|NF|NFL|NG|NGO|NHK|NI|NICO|NIKE|NIKON|NINJA|NISSAN|NISSAY|NL|NO|NOKIA|NORTON|NOW|NOWRUZ|NOWTV|NP|NR|NRA|NRW|NTT|NU|NYC|NZ|OBI|OBSERVER|OFFICE|OKINAWA|OLAYAN|OLAYANGROUP|OLLO|OM|OMEGA|ONE|ONG|ONL|ONLINE|OOO|OPEN|ORACLE|ORANGE|ORG|ORGANIC|ORIGINS|OSAKA|OTSUKA|OTT|OVH|PA|PAGE|PANASONIC|PARIS|PARS|PARTNERS|PARTS|PARTY|PAY|PCCW|PE|PET|PF|PFIZER|PG|PH|PHARMACY|PHD|PHILIPS|PHONE|PHOTO|PHOTOGRAPHY|PHOTOS|PHYSIO|PICS|PICTET|PICTURES|PID|PIN|PING|PINK|PIONEER|PIZZA|PK|PL|PLACE|PLAY|PLAYSTATION|PLUMBING|PLUS|PM|PN|PNC|POHL|POKER|POLITIE|PORN|POST|PR|PRAXI|PRESS|PRIME|PRO|PROD|PRODUCTIONS|PROF|PROGRESSIVE|PROMO|PROPERTIES|PROPERTY|PROTECTION|PRU|PRUDENTIAL|PS|PT|PUB|PW|PWC|PY|QA|QPON|QUEBEC|QUEST|RACING|RADIO|RE|READ|REALESTATE|REALTOR|REALTY|RECIPES|RED|REDUMBRELLA|REHAB|REISE|REISEN|REIT|RELIANCE|REN|RENT|RENTALS|REPAIR|REPORT|REPUBLICAN|REST|RESTAURANT|REVIEW|REVIEWS|REXROTH|RICH|RICHARDLI|RICOH|RIL|RIO|RIP|RO|ROCKS|RODEO|ROGERS|ROOM|RS|RSVP|RU|RUGBY|RUHR|RUN|RW|RWE|RYUKYU|SA|SAARLAND|SAFE|SAFETY|SAKURA|SALE|SALON|SAMSCLUB|SAMSUNG|SANDVIK|SANDVIKCOROMANT|SANOFI|SAP|SARL|SAS|SAVE|SAXO|SB|SBI|SBS|SC|SCB|SCHAEFFLER|SCHMIDT|SCHOLARSHIPS|SCHOOL|SCHULE|SCHWARZ|SCIENCE|SCOT|SD|SE|SEARCH|SEAT|SECURE|SECURITY|SEEK|SELECT|SENER|SERVICES|SEVEN|SEW|SEX|SEXY|SFR|SG|SH|SHANGRILA|SHARP|SHELL|SHIA|SHIKSHA|SHOES|SHOP|SHOPPING|SHOUJI|SHOW|SI|SILK|SINA|SINGLES|SITE|SJ|SK|SKI|SKIN|SKY|SKYPE|SL|SLING|SM|SMART|SMILE|SN|SNCF|SO|SOCCER|SOCIAL|SOFTBANK|SOFTWARE|SOHU|SOLAR|SOLUTIONS|SONG|SONY|SOY|SPA|SPACE|SPORT|SPOT|SR|SRL|SS|ST|STADA|STAPLES|STAR|STATEBANK|STATEFARM|STC|STCGROUP|STOCKHOLM|STORAGE|STORE|STREAM|STUDIO|STUDY|STYLE|SU|SUCKS|SUPPLIES|SUPPLY|SUPPORT|SURF|SURGERY|SUZUKI|SV|SWATCH|SWISS|SX|SY|SYDNEY|SYSTEMS|SZ|TAB|TAIPEI|TALK|TAOBAO|TARGET|TATAMOTORS|TATAR|TATTOO|TAX|TAXI|TC|TCI|TD|TDK|TEAM|TECH|TECHNOLOGY|TEL|TEMASEK|TENNIS|TEVA|TF|TG|TH|THD|THEATER|THEATRE|TIAA|TICKETS|TIENDA|TIPS|TIRES|TIROL|TJ|TJMAXX|TJX|TK|TKMAXX|TL|TM|TMALL|TN|TO|TODAY|TOKYO|TOOLS|TOP|TORAY|TOSHIBA|TOTAL|TOURS|TOWN|TOYOTA|TOYS|TR|TRADE|TRADING|TRAINING|TRAVEL|TRAVELERS|TRAVELERSINSURANCE|TRUST|TRV|TT|TUBE|TUI|TUNES|TUSHU|TV|TVS|TW|TZ|UA|UBANK|UBS|UG|UK|UNICOM|UNIVERSITY|UNO|UOL|UPS|US|UY|UZ|VA|VACATIONS|VANA|VANGUARD|VC|VE|VEGAS|VENTURES|VERISIGN|VERSICHERUNG|VET|VG|VI|VIAJES|VIDEO|VIG|VIKING|VILLAS|VIN|VIP|VIRGIN|VISA|VISION|VIVA|VIVO|VLAANDEREN|VN|VODKA|VOLVO|VOTE|VOTING|VOTO|VOYAGE|VU|WALES|WALMART|WALTER|WANG|WANGGOU|WATCH|WATCHES|WEATHER|WEATHERCHANNEL|WEBCAM|WEBER|WEBSITE|WED|WEDDING|WEIBO|WEIR|WF|WHOSWHO|WIEN|WIKI|WILLIAMHILL|WIN|WINDOWS|WINE|WINNERS|WME|WOLTERSKLUWER|WOODSIDE|WORK|WORKS|WORLD|WOW|WS|WTC|WTF|XBOX|XEROX|XIHUAN|XIN|XN--11B4C3D|XN--1CK2E1B|XN--1QQW23A|XN--2SCRJ9C|XN--30RR7Y|XN--3BST00M|XN--3DS443G|XN--3E0B707E|XN--3HCRJ9C|XN--3PXU8K|XN--42C2D9A|XN--45BR5CYL|XN--45BRJ9C|XN--45Q11C|XN--4DBRK0CE|XN--4GBRIM|XN--54B7FTA0CC|XN--55QW42G|XN--55QX5D|XN--5SU34J936BGSG|XN--5TZM5G|XN--6FRZ82G|XN--6QQ986B3XL|XN--80ADXHKS|XN--80AO21A|XN--80AQECDR1A|XN--80ASEHDB|XN--80ASWG|XN--8Y0A063A|XN--90A3AC|XN--90AE|XN--90AIS|XN--9DBQ2A|XN--9ET52U|XN--9KRT00A|XN--B4W605FERD|XN--BCK1B9A5DRE4C|XN--C1AVG|XN--C2BR7G|XN--CCK2B3B|XN--CCKWCXETD|XN--CG4BKI|XN--CLCHC0EA0B2G2A9GCD|XN--CZR694B|XN--CZRS0T|XN--CZRU2D|XN--D1ACJ3B|XN--D1ALF|XN--E1A4C|XN--ECKVDTC9D|XN--EFVY88H|XN--FCT429K|XN--FHBEI|XN--FIQ228C5HS|XN--FIQ64B|XN--FIQS8S|XN--FIQZ9S|XN--FJQ720A|XN--FLW351E|XN--FPCRJ9C3D|XN--FZC2C9E2C|XN--FZYS8D69UVGM|XN--G2XX48C|XN--GCKR3F0F|XN--GECRJ9C|XN--GK3AT1E|XN--H2BREG3EVE|XN--H2BRJ9C|XN--H2BRJ9C8C|XN--HXT814E|XN--I1B6B1A6A2E|XN--IMR513N|XN--IO0A7I|XN--J1AEF|XN--J1AMH|XN--J6W193G|XN--JLQ480N2RG|XN--JVR189M|XN--KCRX77D1X4A|XN--KPRW13D|XN--KPRY57D|XN--KPUT3I|XN--L1ACC|XN--LGBBAT1AD8J|XN--MGB9AWBF|XN--MGBA3A3EJT|XN--MGBA3A4F16A|XN--MGBA7C0BBN0A|XN--MGBAAM7A8H|XN--MGBAB2BD|XN--MGBAH1A3HJKRD|XN--MGBAI9AZGQP6J|XN--MGBAYH7GPA|XN--MGBBH1A|XN--MGBBH1A71E|XN--MGBC0A9AZCG|XN--MGBCA7DZDO|XN--MGBCPQ6GPA1A|XN--MGBERP4A5D4AR|XN--MGBGU82A|XN--MGBI4ECEXP|XN--MGBPL2FH|XN--MGBT3DHD|XN--MGBTX2B|XN--MGBX4CD0AB|XN--MIX891F|XN--MK1BU44C|XN--MXTQ1M|XN--NGBC5AZD|XN--NGBE9E0A|XN--NGBRX|XN--NODE|XN--NQV7F|XN--NQV7FS00EMA|XN--NYQY26A|XN--O3CW4H|XN--OGBPF8FL|XN--OTU796D|XN--P1ACF|XN--P1AI|XN--PGBS0DH|XN--PSSY2U|XN--Q7CE6A|XN--Q9JYB4C|XN--QCKA1PMC|XN--QXA6A|XN--QXAM|XN--RHQV96G|XN--ROVU88B|XN--RVC1E0AM3E|XN--S9BRJ9C|XN--SES554G|XN--T60B56A|XN--TCKWE|XN--TIQ49XQYJ|XN--UNUP4Y|XN--VERMGENSBERATER-CTB|XN--VERMGENSBERATUNG-PWB|XN--VHQUV|XN--VUQ861B|XN--W4R85EL8FHU5DNRA|XN--W4RS40L|XN--WGBH1C|XN--WGBL6A|XN--XHQ521B|XN--XKC2AL3HYE2A|XN--XKC2DL3A5EE0H|XN--Y9A3AQ|XN--YFRO4I67O|XN--YGBI2AMMX|XN--ZFR164B|XXX|XYZ|YACHTS|YAHOO|YAMAXUN|YANDEX|YE|YODOBASHI|YOGA|YOKOHAMA|YOU|YOUTUBE|YT|YUN|ZA|ZAPPOS|ZARA|ZERO|ZIP|ZM|ZONE|ZUERICH|ZW|example|invalid|localhost|internal|test|onion";
-
-const DOMAIN_PATTERN = new RegExp(
-  `(?:^|[:\\/\\.@])[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.(?:${TLD_LIST})(?:[:\\/\\?]|$)`,
-  "i"
-);
-
-// ========================================
-// URL判定関数
-// ========================================
-
-/**
- * RFC3986準拠のURIかどうかを判定
- * @param {string} str - 判定対象の文字列
- * @returns {boolean}
- */
-function isRFC3986(str) {
-  return PATTERNS.RFC3986.test(str);
-}
-
-/**
- * 特殊URLかどうかを判定（ドメイン名を含むか）
- * @param {string} str - 判定対象の文字列
- * @returns {boolean}
- */
-function isSpecialURL(str) {
-  if (/\s/.test(str)) return false;
-  return DOMAIN_PATTERN.test(str);
-}
-
-// ========================================
-// 文字列処理関数
-// ========================================
-
-/**
- * 文字列の先頭の空白を除去
- * @param {string} str
- * @returns {string}
- */
-function trimLeadingSpaces(str) {
-  return str.replace(/^ +/, "");
-}
-
-/**
- * 不正なHTTPスキームを修正
- * @param {string} url
- * @returns {string}
- */
-function fixMalformedScheme(url) {
-  return url.replace(PATTERNS.MALFORMED_HTTP, "http$1");
-}
-
-/**
- * URLを正規化
- * @param {string} url
- * @returns {string}
- */
-function normalizeURL(url) {
-  // メールアドレスの場合
-  if (PATTERNS.EMAIL.test(url)) {
-    return `mailto:${url}`;
-  }
-
-  // スキームがない場合は追加
-  if (!/^[a-z][\da-z+\-]*:/i.test(url)) {
-    const cleanUrl = url.replace(PATTERNS.LEADING_JUNK, "");
-    return `http://${cleanUrl}`.replace(PATTERNS.FTP_PATH, "f$1");
-  }
-
-  return url;
-}
-
-/**
- * 検索URLを生成
- * @param {string} query - 検索クエリ
- * @returns {string}
- */
-function buildSearchURL(query) {
-  const encodedQuery = encodeURIComponent(query);
-  const replaced = settings.engineURL.replace("%s", encodedQuery);
-
-  return replaced === settings.engineURL
-    ? settings.engineURL + encodedQuery
-    : replaced;
-}
-
-// ========================================
-// 状態管理関数
-// ========================================
-
-/**
- * 状態を初期化
- */
-function resetState() {
-  Object.assign(state, {
-    selectStr: "",
-    isImage: false,
-    isBase64: false,
-    isAddressSearch: false,
-  });
-  broadcastState();
-}
-
-/**
- * 状態を設定
- * @param {Object} newState
- */
-function setState(newState) {
-  Object.assign(state, newState);
-  broadcastState();
-}
-
-// ========================================
-// メッセージング
-// ========================================
-
-/**
- * 現在の状態を全フレームにブロードキャスト
- */
-function broadcastState() {
-  const message = {
-    message_addon: MESSAGE_TYPE.SET_STR,
-    SelectStr: state.selectStr,
-    IsImage: state.isImage,
-    IsBase64: state.isBase64,
-    IsAddressSearch: state.isAddressSearch,
+// ===== SettingsManager =====
+// chrome.storage.local の値を内部キー名に変換して保持する。
+// ストレージの変更通知（{newValue} 形式）と初期ロード（値そのまま）の両方を update() で受け入れる。
+class SettingsManager {
+  #settings = {
+    engineURL:      DEFAULTS.SEARCH_ENGINE_URL,
+    newTabPosition: DEFAULTS.TAB_POSITION,
+    ...TOGGLE_DEFAULTS,
   };
 
-  if (window !== window.top) {
-    // 子フレームからの送信
+  get(key) { return this.#settings[key]; }
+
+  // スプレッドコピーを返すことで呼び元が内部オブジェクトを直接書き換えるのを防ぐ
+  getAll() { return { ...this.#settings }; }
+
+  // ストレージキー（searchEngineURL, tabPosition）を内部キー（engineURL, newTabPosition）に読み替える
+  update(data) {
+    if (data.searchEngineURL !== undefined) this.#settings.engineURL      = data.searchEngineURL;
+    if (data.tabPosition      !== undefined) this.#settings.newTabPosition = data.tabPosition;
+    for (const key of TOGGLE_KEYS) {
+      if (data[key] !== undefined) this.#settings[key] = data[key];
+    }
+  }
+
+  // 非アクティブ期間中にストレージが変更されていた場合に備え、activate() から毎回呼ばれる
+  async load() {
     try {
-      window.top.postMessage(message, "*");
-      for (let i = 0; i < window.top.length; i++) {
-        window.top[i].postMessage(message, "*");
-      }
+      this.update(await chrome.storage.local.get(["searchEngineURL", "tabPosition", ...TOGGLE_KEYS]));
     } catch (e) {
-      // クロスオリジンエラーを無視
+      console.error("Failed to load settings:", e);
     }
-  } else {
-    // トップウィンドウからの送信
-    broadcastToFrames("frame", message);
-    broadcastToFrames("iframe", message);
   }
 }
 
-/**
- * 指定タグのフレームにメッセージを送信
- * @param {string} tagName
- * @param {Object} message
- */
-function broadcastToFrames(tagName, message) {
-  const frames = document.getElementsByTagName(tagName);
-  for (const frame of frames) {
+// ===== DragClassifier =====
+// ドラッグイベントを解析して { kind, url/src } の判別共用体を返す。
+// DOM へのアクセスはあるが副作用はなく、状態も持たない。
+class DragClassifier {
+  // %s プレースホルダーがあれば置換、なければ URL末尾にエンコード済みクエリを追記する
+  #buildSearchURL(query, engineURL) {
+    const encoded  = encodeURIComponent(query);
+    const replaced = engineURL.replace("%s", encoded);
+    // replace() はマッチなしでも元の文字列をそのまま返すため、等値比較で %s の有無を検出できる
+    return replaced === engineURL ? engineURL + encoded : replaced;
+  }
+
+  #normalizeURL(url) {
+    if (PATTERNS.EMAIL.test(url)) return `mailto:${url}`;
+    if (!/^[a-z][\da-z+\-]*:/i.test(url))
+      // ftp.xxx の場合は http:// を付与してから FTP_PATH で ftp:// に変換し直す（スキームなし URL を統一的に処理するため）
+      return `http://${url.replace(PATTERNS.LEADING_JUNK, "")}`.replace(PATTERNS.FTP_PATH, "f$1");
+    return url;
+  }
+
+  #findFirstImage(node) {
+    for (let c = node.firstElementChild; c; c = c.nextElementSibling) {
+      if (c instanceof HTMLImageElement) return c;
+      const found = this.#findFirstImage(c);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  // Chrome ではリンク付き <img> をドラッグしても target が HTMLImageElement になるため
+  // isPreferSaveImage=false のとき祖先の <a href> を探してリンクを優先する
+  #findAncestorAnchor(node) {
+    for (let p = node.parentElement; p; p = p.parentElement) {
+      if (p.href) return p;
+    }
+    return null;
+  }
+
+  // RFC3986 URI → ドメイン風文字列 → テキスト検索 の順で判定する
+  classifyText(rawText, engineURL) {
+    // 末尾のスペースは URL クエリの一部になりうるため trim せず先頭のみ除去する
+    const text = rawText.replace(/^ +/, "");
+    if (PATTERNS.RFC3986.test(text))
+      // RFC3986 パターンは ttp:// や hxxp:// も有効なスキームとしてマッチするため、ここで正規化する
+      return { kind: DRAG.ADDRESS, url: text.replace(PATTERNS.MALFORMED_HTTP, "http$1") };
+    if (!/\s/.test(text) && DOMAIN_PATTERN.test(text))
+      return { kind: DRAG.ADDRESS, url: this.#normalizeURL(text) };
+    return { kind: DRAG.SEARCH, url: this.#buildSearchURL(rawText, engineURL) };
+  }
+
+  // data URI・相対パス・スキームなし URL はすべて isBase64: true として扱う
+  // （background の Downloads API で処理できないため呼び元がローカル保存に切り替える）
+  classifyImageSrc(src) {
+    return {
+      kind:     DRAG.IMAGE,
+      src,
+      isBase64: !PATTERNS.SCHEME.test(src) || PATTERNS.DATA_URI.test(src),
+    };
+  }
+
+  // 優先順: 画像保存優先モードの <img> → リンク付き <img> → href 属性要素 → テキスト
+  classifyElement(event, settings) {
+    const { target } = event;
+
+    if (target instanceof HTMLImageElement) {
+      if (!settings.isPreferSaveImage) {
+        const anchor = this.#findAncestorAnchor(target);
+        if (anchor) return { kind: DRAG.ADDRESS, url: anchor.href };
+      }
+      return this.classifyImageSrc(target.src);
+    }
+
+    if (settings.isPreferSaveImage) {
+      const img = this.#findFirstImage(target);
+      if (img) return this.classifyImageSrc(img.src);
+    }
+
+    if (target.href !== undefined) return { kind: DRAG.ADDRESS, url: target.href };
+    return this.classifyText(event.dataTransfer.getData("text/plain"), settings.engineURL);
+  }
+}
+
+// ===== DomActions =====
+// ドロップ時に発生する DOM 副作用をまとめた静的ユーティリティ。
+// インスタンス化不要なため全メソッドを static にする。
+class DomActions {
+  // Clipboard API が CSP やサンドボックスで使えない場合に非表示 textarea でフォールバックする
+  static async copyToClipboard(text) {
     try {
-      frame.contentWindow?.postMessage(message, "*");
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.cssText = "position:fixed;opacity:0";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    }
+  }
+
+  // data URI の場合は MIME type からファイル拡張子を推定してダウンロードファイル名を設定する
+  static downloadViaAnchor(url) {
+    const a = document.createElement("a");
+    a.href = url;
+    const m = url.match(/^data:image\/([^;]+);base64,/i);
+    a.download = m
+      ? `image.${m[1].toLowerCase().replace("svg+xml", "svg").replace("jpeg", "jpg")}`
+      : "";
+    a.click();
+  }
+
+  // Chrome は data URI を window.open で直接開けないため Blob URL に変換してから新規タブを開く
+  static openDataUri(dataUri) {
+    const m = dataUri.match(/^data:([^;]+);base64,(.+)$/i);
+    if (!m) return;
+    const bytes = atob(m[2]);
+    const arr   = new Uint8Array(bytes.length);
+    for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+    window.open(URL.createObjectURL(new Blob([arr], { type: m[1] })), "_blank");
+  }
+}
+
+// ===== DropExecutor =====
+// drag の種別と修飾キーの組み合わせに応じてバックグラウンドへ送信または DOM 操作を行う。
+class DropExecutor {
+  async #send(type, value, isForeground, tab) {
+    try {
+      await chrome.runtime.sendMessage({ type, value, isForeground, tab });
     } catch (e) {
-      // クロスオリジンエラーを無視
-    }
-  }
-}
-
-/**
- * メッセージ受信ハンドラ
- * @param {MessageEvent} event
- */
-function handleMessage(event) {
-  const { data } = event;
-  if (data?.message_addon === MESSAGE_TYPE.SET_STR) {
-    Object.assign(state, {
-      selectStr: data.SelectStr,
-      isImage: data.IsImage,
-      isBase64: data.IsBase64,
-      isAddressSearch: data.IsAddressSearch,
-    });
-  }
-}
-
-/**
- * バックグラウンドスクリプトにメッセージを送信
- * @param {string} type
- * @param {string} value
- * @param {boolean} isForeground
- * @returns {Promise<void>}
- */
-async function sendToBackground(type, value, isForeground) {
-  try {
-    await chrome.runtime.sendMessage({
-      type,
-      value,
-      isForeground: isForeground,
-      tab: settings.newTabPosition,
-    });
-  } catch (error) {
-    console.error("Failed to send message to background:", error);
-  }
-}
-
-// ========================================
-// DOM操作
-// ========================================
-
-/**
- * 子要素から最初の画像要素を再帰的に探索
- * @param {Element} node
- * @returns {HTMLImageElement|null}
- */
-function findFirstImageChild(node) {
-  for (let child = node.firstElementChild; child; child = child.nextElementSibling) {
-    if (child instanceof HTMLImageElement) {
-      return child;
-    }
-    const found = findFirstImageChild(child);
-    if (found) return found;
-  }
-  return null;
-}
-
-/**
- * 親要素を再帰的に探索し、リンク要素がある場合その要素を返す
- * Chrome特有: リンク付き画像でもHTMLImageElementが取れてしまうため必要
- * @param {Element} node
- * @returns {HTMLAnchorElement|null}
- */
-function findFirstLinkParent(node) {
-  for (let parent = node.parentElement; parent; parent = parent.parentElement) {
-    if (parent.href) {
-      return parent;
-    }
-  }
-  return null;
-}
-
-/**
- * ダウンロードリンクを作成して実行
- * @param {string} url
- */
-function downloadViaAnchor(url) {
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  const dataMatch = url.match(/^data:image\/([^;]+);base64,/i);
-  if (dataMatch) {
-    const ext = dataMatch[1].toLowerCase().replace("svg+xml", "svg").replace("jpeg", "jpg");
-    anchor.download = `image.${ext}`;
-  } else {
-    anchor.download = "";
-  }
-  anchor.click();
-}
-
-/**
- * テキストをクリップボードにコピー
- * @param {string} text
- */
-async function copyToClipboard(text) {
-  try {
-    await navigator.clipboard.writeText(text);
-  } catch {
-    const textarea = document.createElement("textarea");
-    textarea.value = text;
-    textarea.style.cssText = "position:fixed;opacity:0";
-    document.body.appendChild(textarea);
-    textarea.select();
-    document.execCommand("copy");
-    document.body.removeChild(textarea);
-  }
-}
-
-// ========================================
-// イベントハンドラ
-// ========================================
-
-/**
- * デフォルトイベントを無効化
- * @param {DragEvent} event
- */
-function preventDefault(event) {
-  if (event.preventDefault && !event.shiftKey) {
-    event.preventDefault();
-  }
-}
-
-/**
- * ドラッグ開始時の処理
- * @param {DragEvent} event
- */
-function handleDragStart(event) {
-  resetState();
-
-  if (event.shiftKey) return;
-
-  const isHTMLElement =
-    event.target instanceof HTMLElement &&
-    !(event.target instanceof HTMLTextAreaElement) &&
-    !(event.target instanceof HTMLInputElement);
-
-  if (isHTMLElement) {
-    processDragFromElement(event);
-  } else {
-    processDragFromText(event);
-  }
-}
-
-/**
- * HTML要素からのドラッグを処理
- * @param {DragEvent} event
- */
-function processDragFromElement(event) {
-  let target = event.target;
-  let isFoundImage = false;
-
-  // 画像要素を探索
-  if (!(target instanceof HTMLImageElement)) {
-    if (settings.isPreferSaveImage) {
-      const foundImg = findFirstImageChild(target);
-      if (foundImg) {
-        target = foundImg;
-        isFoundImage = true;
-      }
-    }
-  } else {
-    // 画像要素の場合
-    if (settings.isPreferSaveImage) {
-      isFoundImage = true;
-    } else {
-      // Chrome特有: リンク付き画像でもHTMLImageElementが取れてしまうため、
-      // 親要素を確認してリンクが存在しているか確認する
-      const foundLink = findFirstLinkParent(target);
-      if (foundLink) {
-        target = foundLink;
-      } else {
-        isFoundImage = true;
-      }
+      console.error("Failed to send message to background:", e);
     }
   }
 
-  if (isFoundImage && target.href === undefined) {
-    // 画像の場合
-    setState({
-      isImage: settings.isSaveImage, // 画像を保存するオプションが無効の場合 URL として開く
-      selectStr: target.src,
-      isBase64: !PATTERNS.SCHEME.test(target.src) || PATTERNS.DATA_URI.test(target.src),
-    });
-  } else if (target.href !== undefined) {
-    // リンクの場合
-    setState({
-      isAddressSearch: true,
-      selectStr: target.href,
-    });
-  } else {
-    // href なし要素はテキストドラッグにフォールバック
-    processDragFromText(event);
-  }
-}
-
-/**
- * テキストからのドラッグを処理
- * @param {DragEvent} event
- */
-function processDragFromText(event) {
-  const rawText = event.dataTransfer.getData("text/plain");
-  const text = trimLeadingSpaces(rawText);
-
-  if (isRFC3986(text)) {
-    // RFC3986準拠URI
-    setState({
-      isAddressSearch: true,
-      selectStr: fixMalformedScheme(text),
-    });
-  } else if (isSpecialURL(text)) {
-    // ドメインを含むURL
-    setState({
-      isAddressSearch: true,
-      selectStr: normalizeURL(text),
-    });
-  } else {
-    // 通常のテキスト（検索）
-    setState({
-      selectStr: buildSearchURL(rawText),
-    });
-  }
-}
-
-/**
- * ドラッグオーバー時の処理
- * @param {DragEvent} event
- */
-function handleDragOver(event) {
-  const targetNodeName = event.target.nodeName.toUpperCase();
-
-  if (targetNodeName === "INPUT" || targetNodeName === "TEXTAREA" || event.shiftKey) {
-    return;
-  }
-
-  preventDefault(event);
-}
-
-/**
- * ドロップ時の処理
- * @param {DragEvent} event
- */
-function handleDrop(event) {
-  const targetNodeName = event.target.nodeName.toUpperCase();
-
-  // 入力フィールドへのドロップまたはShiftキー押下時は何もしない
-  if (targetNodeName === "INPUT" || targetNodeName === "TEXTAREA" || event.shiftKey) {
-    resetState();
-    return;
-  }
-
-  preventDefault(event);
-
-  // ファイルドロップの検出
-  if (event.dataTransfer.items) {
-    const hasFile = [...event.dataTransfer.items].some(
-      (item) => item.kind === "file" && state.selectStr === ""
-    );
-    if (hasFile) {
-      resetState();
+  // isSaveImage=false → 画像URLを新規タブで開く
+  // ctrlKey / base64 → Downloads API が使えないためアンカークリックでローカル保存
+  // altKey → ダウンロードせず画像URLを新規タブで開く
+  // デフォルト → background の Downloads API でダウンロードダイアログを表示
+  async #executeImage(drag, event, settings) {
+    const { src, isBase64 } = drag;
+    if (!settings.isSaveImage) {
+      await this.#send(MESSAGE_TYPE.SEARCH, src, settings.isSearchForeground, settings.newTabPosition);
       return;
     }
+    if (isBase64 || event.ctrlKey) { DomActions.downloadViaAnchor(src); return; }
+    await this.#send(
+      event.altKey ? MESSAGE_TYPE.SEARCH : MESSAGE_TYPE.DOWNLOAD,
+      src,
+      true,
+      settings.newTabPosition
+    );
   }
 
-  if (state.selectStr === "") {
-    resetState();
-    return;
+  // ctrlKey → クリップボードにコピーしつつ新規タブも開く
+  // altKey（ctrlKey なし）→ ダウンロード / デフォルト → 新規タブで開く
+  async #executeAddress(drag, event, settings) {
+    const { url } = drag;
+    if (PATTERNS.DATA_URI.test(url)) { DomActions.openDataUri(url); return; }
+    if (event.ctrlKey) DomActions.copyToClipboard(url);
+    await this.#send(
+      event.altKey && !event.ctrlKey ? MESSAGE_TYPE.DOWNLOAD : MESSAGE_TYPE.SEARCH,
+      url,
+      settings.isAddressForeground,
+      settings.newTabPosition
+    );
   }
 
-  if (state.isImage) {
-    handleImageDrop(event);
-  } else {
-    handleLinkDrop(event);
+  // ctrlKey → URL エンコード前の元テキストをクリップボードにコピーする
+  async #executeSearch(drag, event, settings) {
+    const { url } = drag;
+    if (PATTERNS.DATA_URI.test(url)) { DomActions.openDataUri(url); return; }
+    if (event.ctrlKey) DomActions.copyToClipboard(event.dataTransfer.getData("text/plain"));
+    await this.#send(MESSAGE_TYPE.SEARCH, url, settings.isSearchForeground, settings.newTabPosition);
   }
 
-  resetState();
-}
-
-/**
- * 画像ドロップの処理
- * @param {DragEvent} event
- */
-function handleImageDrop(event) {
-  // Base64またはCtrl押下時は直接ダウンロード
-  if (state.isBase64 || event.ctrlKey) {
-    downloadViaAnchor(state.selectStr);
-    return;
-  }
-
-  // Alt押下時は新規タブで表示、それ以外はダウンロード
-  const messageType =
-    event.altKey && !event.ctrlKey ? MESSAGE_TYPE.SEARCH : MESSAGE_TYPE.DOWNLOAD;
-
-  sendToBackground(messageType, state.selectStr, true);
-}
-
-/**
- * リンクドロップの処理
- * @param {DragEvent} event
- */
-function handleLinkDrop(event) {
-  // data:image URIはBlob URLに変換して新規タブで表示
-  if (PATTERNS.DATA_URI.test(state.selectStr)) {
-    const match = state.selectStr.match(/^data:([^;]+);base64,(.+)$/i);
-    if (match) {
-      const bytes = atob(match[2]);
-      const arr = new Uint8Array(bytes.length);
-      for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
-      const blobUrl = URL.createObjectURL(new Blob([arr], { type: match[1] }));
-      window.open(blobUrl, "_blank");
+  async execute(drag, event, settings) {
+    switch (drag.kind) {
+      case DRAG.IMAGE:   await this.#executeImage(drag, event, settings);   break;
+      case DRAG.ADDRESS: await this.#executeAddress(drag, event, settings); break;
+      case DRAG.SEARCH:  await this.#executeSearch(drag, event, settings);  break;
     }
-    return;
-  }
-
-  // Ctrl押下時はクリップボードにコピー
-  if (event.ctrlKey) {
-    const clipboardText = state.isAddressSearch
-      ? state.selectStr
-      : event.dataTransfer.getData("text/plain");
-    copyToClipboard(clipboardText);
-  }
-
-  // Alt押下時かつアドレス検索の場合はダウンロード
-  const messageType =
-    state.isAddressSearch && event.altKey && !event.ctrlKey
-      ? MESSAGE_TYPE.DOWNLOAD
-      : MESSAGE_TYPE.SEARCH;
-
-  const isForeground = state.isAddressSearch
-    ? settings.isAddressForeground
-    : settings.isSearchForeground;
-
-  sendToBackground(messageType, state.selectStr, isForeground);
-}
-
-// ========================================
-// 設定管理
-// ========================================
-
-/**
- * 設定を更新
- * @param {Object} storageData
- */
-function updateSettings(storageData) {
-  if (storageData.searchEngineURL !== undefined) {
-    settings.engineURL = storageData.searchEngineURL;
-  }
-
-  if (storageData.tabPosition !== undefined) {
-    settings.newTabPosition = storageData.tabPosition;
-  }
-
-  if (storageData.checkboxArray !== undefined) {
-    const toggleArray = storageData.checkboxArray;
-    settings.isAddressForeground = toggleArray.includes("is_address_foreground") || toggleArray.includes("is_address_forground");
-    settings.isSearchForeground = toggleArray.includes("is_search_foreground") || toggleArray.includes("is_search_forground");
-    settings.isSaveImage = toggleArray.includes("is_save_image");
-    settings.isPreferSaveImage = toggleArray.includes("is_prefer_save_image");
   }
 }
 
-/**
- * ストレージから設定を読み込む
- * @returns {Promise<void>}
- */
-async function loadSettings() {
-  try {
-    const storageData = await chrome.storage.local.get([
-      "searchEngineURL",
-      "tabPosition",
-      "checkboxArray",
-    ]);
-    updateSettings(storageData);
-  } catch (error) {
-    console.error("Failed to load settings:", error);
-  }
-}
+// ===== FrameSync =====
+// iframe / frame をまたいで drag ペイロードを postMessage で同期する。
+// クロスオリジンフレームへの送信は例外を握り潰して継続する。
+class FrameSync {
+  #handler = null;
 
-/**
- * バックグラウンドに現在のタブが無効化されているか問い合わせる
- * iframe内でも常にタブのトップレベルURLで判定される
- * @returns {Promise<boolean>}
- */
-async function checkDisabled() {
-  try {
-    const response = await chrome.runtime.sendMessage({ type: "checkDisabled" });
-    return response?.disabled ?? false;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * SPA ナビゲーション後に有効化/無効化を再判定
- */
-async function handleNavigation() {
-  if (await checkDisabled()) {
-    deactivate();
-  } else {
-    await activate();
-  }
-}
-
-/**
- * ストレージ変更時の設定更新
- * @param {Object} changes
- * @param {string} area
- */
-async function handleStorageChange(changes, area) {
-  if (area !== "local") return;
-
-  if (changes["siteRules"] !== undefined) {
-    if (await checkDisabled()) {
-      deactivate();
+  // サブフレームからは top とその全兄弟フレームへ送信し、top フレームからは全子フレームへ送信する
+  broadcast(drag) {
+    const msg = { message_addon: MESSAGE_TYPE.SET_STR, drag };
+    if (window !== window.top) {
+      try {
+        window.top.postMessage(msg, "*");
+        // window.top[i] はフレームインデックスによるサブフレームへの参照（Window オブジェクトの配列的アクセス）
+        for (let i = 0; i < window.top.length; i++) window.top[i].postMessage(msg, "*");
+      } catch { /* cross-origin */ }
     } else {
-      await activate();
+      for (const tag of ["frame", "iframe"]) {
+        for (const el of document.getElementsByTagName(tag)) {
+          try { el.contentWindow?.postMessage(msg, "*"); } catch { /* cross-origin */ }
+        }
+      }
     }
-    return;
   }
 
-  if (!isActive) return;
-
-  const newSettings = {};
-
-  if (changes.searchEngineURL !== undefined) {
-    newSettings.searchEngineURL = changes.searchEngineURL.newValue;
-  }
-  if (changes.tabPosition !== undefined) {
-    newSettings.tabPosition = changes.tabPosition.newValue;
-  }
-  if (changes.checkboxArray !== undefined) {
-    newSettings.checkboxArray = changes.checkboxArray.newValue;
+  // onDrag コールバックで QuickDragController の #drag を更新することでフレーム間の状態を統一する
+  listen(onDrag) {
+    this.#handler = ({ data }) => {
+      if (data?.message_addon === MESSAGE_TYPE.SET_STR && data.drag) onDrag(data.drag);
+    };
+    window.addEventListener("message", this.#handler);
   }
 
-  if (Object.keys(newSettings).length > 0) {
-    updateSettings(newSettings);
+  // 参照を保存しているため確実に同じリスナーを削除できる
+  unlisten() {
+    if (this.#handler) {
+      window.removeEventListener("message", this.#handler);
+      this.#handler = null;
+    }
   }
 }
 
-// ========================================
-// 初期化
-// ========================================
+// ===== HistoryPatcher =====
+// SPA のクライアントサイドルーティングを検知するため history.pushState / replaceState にフックを挿入する。
+class HistoryPatcher {
+  #origPushState    = null;
+  #origReplaceState = null;
 
-/**
- * ドラッグ機能を有効化
- * @returns {Promise<void>}
- */
-async function activate() {
-  if (isActive) return;
-  isActive = true;
-  await loadSettings();
-  document.addEventListener("dragstart", handleDragStart, false);
-  document.addEventListener("dragover", handleDragOver, false);
-  document.addEventListener("dragend", preventDefault, false);
-  document.addEventListener("drop", handleDrop, false);
-  window.addEventListener("message", handleMessage, false);
-  if (window === window.top && origPushState === null) {
-    origPushState = history.pushState.bind(history);
-    origReplaceState = history.replaceState.bind(history);
-    history.pushState = function (...args) { origPushState(...args); handleNavigation(); };
-    history.replaceState = function (...args) { origReplaceState(...args); handleNavigation(); };
+  // トップフレームのみパッチし、二重パッチを防ぐ（activate() が複数回呼ばれても安全）
+  patch(onNavigate) {
+    if (window !== window.top || this.#origPushState !== null) return;
+    this.#origPushState    = history.pushState.bind(history);
+    this.#origReplaceState = history.replaceState.bind(history);
+    history.pushState    = (...a) => { this.#origPushState(...a);    onNavigate(); };
+    history.replaceState = (...a) => { this.#origReplaceState(...a); onNavigate(); };
+  }
+
+  // 元の関数を復元し、次の activate() で再パッチできるよう null に戻す
+  unpatch() {
+    if (this.#origPushState    !== null) { history.pushState    = this.#origPushState;    this.#origPushState    = null; }
+    if (this.#origReplaceState !== null) { history.replaceState = this.#origReplaceState; this.#origReplaceState = null; }
   }
 }
 
-/**
- * ドラッグ機能を無効化
- */
-function deactivate() {
-  if (!isActive) return;
-  isActive = false;
-  document.removeEventListener("dragstart", handleDragStart, false);
-  document.removeEventListener("dragover", handleDragOver, false);
-  document.removeEventListener("dragend", preventDefault, false);
-  document.removeEventListener("drop", handleDrop, false);
-  window.removeEventListener("message", handleMessage, false);
-  if (origPushState !== null) {
-    history.pushState = origPushState;
-    origPushState = null;
+// ===== QuickDragController =====
+// コンテンツスクリプトの最上位クラス。各クラスのインスタンスを保持し、ライフサイクルを管理する。
+class QuickDragController {
+  #settings       = new SettingsManager();
+  #classifier     = new DragClassifier();
+  #executor       = new DropExecutor();
+  #frameSync      = new FrameSync();
+  #historyPatcher = new HistoryPatcher();
+
+  #drag     = { kind: DRAG.NONE };
+  #isActive = false;
+
+  // removeEventListener で同一関数参照が必要なためアロー関数でインスタンスに束縛する
+  #handleDragStart = (e) => this.#onDragStart(e);
+  #handleDragOver  = (e) => this.#onDragOver(e);
+  #handleDragEnd   = (e) => this.#onDragEnd(e);
+  #handleDrop      = (e) => this.#onDrop(e);
+
+  static #isInputTarget({ target }) {
+    const tag = target.nodeName.toUpperCase();
+    return tag === "INPUT" || tag === "TEXTAREA";
   }
-  if (origReplaceState !== null) {
-    history.replaceState = origReplaceState;
-    origReplaceState = null;
+
+  // shiftKey はネイティブのドラッグ動作を通すための脱出口。drag を NONE にリセットして伝播を止める
+  #onDragStart(event) {
+    this.#drag = { kind: DRAG.NONE };
+    if (event.shiftKey) { this.#frameSync.broadcast(this.#drag); return; }
+
+    // textarea / input の選択テキストドラッグはテキスト分類として扱う
+    const isDraggableElement =
+      event.target instanceof HTMLElement &&
+      !(event.target instanceof HTMLTextAreaElement) &&
+      !(event.target instanceof HTMLInputElement);
+
+    this.#drag = isDraggableElement
+      ? this.#classifier.classifyElement(event, this.#settings.getAll())
+      : this.#classifier.classifyText(event.dataTransfer.getData("text/plain"), this.#settings.get("engineURL"));
+
+    this.#frameSync.broadcast(this.#drag);
+  }
+
+  // input / textarea へのドロップはブラウザのデフォルト動作（テキスト挿入）に委ねるため preventDefault しない
+  #onDragOver(event) {
+    if (QuickDragController.#isInputTarget(event) || event.shiftKey) return;
+    event.preventDefault();
+  }
+
+  // ドロップが成立しなかった場合にブラウザが表示するスナップバックアニメーションを抑制する
+  #onDragEnd(event) {
+    if (!event.shiftKey) event.preventDefault();
+  }
+
+  // ドロップ処理後は必ず drag を NONE にリセットして全フレームに通知する
+  async #onDrop(event) {
+    if (QuickDragController.#isInputTarget(event) || event.shiftKey) {
+      this.#drag = { kind: DRAG.NONE };
+      this.#frameSync.broadcast(this.#drag);
+      return;
+    }
+
+    event.preventDefault();
+
+    if (this.#drag.kind !== DRAG.NONE) {
+      await this.#executor.execute(this.#drag, event, this.#settings.getAll());
+    }
+
+    this.#drag = { kind: DRAG.NONE };
+    this.#frameSync.broadcast(this.#drag);
+  }
+
+  async #checkDisabled() {
+    try {
+      const res = await chrome.runtime.sendMessage({ type: "checkDisabled" });
+      return res?.disabled ?? false;
+    } catch {
+      // MV3 の service worker は非アクティブ時に sendMessage が失敗するため false を返して続行する
+      return false;
+    }
+  }
+
+  async #handleNavigation() {
+    if (await this.#checkDisabled()) this.deactivate();
+    else await this.activate();
+  }
+
+  // 冪等: 既にアクティブな場合は設定の再ロードをスキップして早期リターンする
+  async activate() {
+    if (this.#isActive) return;
+    this.#isActive = true;
+    await this.#settings.load();
+    document.addEventListener("dragstart", this.#handleDragStart);
+    document.addEventListener("dragover",  this.#handleDragOver);
+    document.addEventListener("dragend",   this.#handleDragEnd);
+    document.addEventListener("drop",      this.#handleDrop);
+    this.#frameSync.listen(drag => { this.#drag = drag; });
+    this.#historyPatcher.patch(() => this.#handleNavigation());
+  }
+
+  // 冪等: 既に非アクティブなら何もしない
+  deactivate() {
+    if (!this.#isActive) return;
+    this.#isActive = false;
+    document.removeEventListener("dragstart", this.#handleDragStart);
+    document.removeEventListener("dragover",  this.#handleDragOver);
+    document.removeEventListener("dragend",   this.#handleDragEnd);
+    document.removeEventListener("drop",      this.#handleDrop);
+    this.#frameSync.unlisten();
+    this.#historyPatcher.unpatch();
+  }
+
+  async initialize() {
+    // サイトルール変更は非アクティブ時でも即座に有効 / 無効を再評価する
+    // その他の設定変更はアクティブ時のみ反映する（非アクティブ時は activate() 時に再ロードされる）
+    chrome.storage.onChanged.addListener(async (changes, area) => {
+      if (area !== "local") return;
+      if (RULES_STORAGE_KEY in changes) { await this.#handleNavigation(); return; }
+      if (!this.#isActive) return;
+      // storage.onChanged の {key: {oldValue, newValue}} 形式を update() 向けの {key: value} 形式に変換する
+      this.#settings.update(Object.fromEntries(Object.entries(changes).map(([k, v]) => [k, v.newValue])));
+    });
+
+    // popstate / hashchange は SPA のクライアントサイドルーティングで pushState が呼ばれない場合に対応する
+    if (window === window.top) {
+      const nav = () => this.#handleNavigation();
+      window.addEventListener("popstate",   nav);
+      window.addEventListener("hashchange", nav);
+    }
+
+    if (!await this.#checkDisabled()) await this.activate();
   }
 }
 
-/**
- * 初期化処理
- * @returns {Promise<void>}
- */
-async function initialize() {
-  chrome.storage.onChanged.addListener(handleStorageChange);
-
-  // トップフレームのみ SPA ナビゲーションを監視（popstate/hashchange）
-  // pushState/replaceState のパッチは activate/deactivate で管理する
-  if (window === window.top) {
-    window.addEventListener("popstate", handleNavigation, false);
-    window.addEventListener("hashchange", handleNavigation, false);
-  }
-
-  if (!await checkDisabled()) {
-    await activate();
-  }
-}
-
-// 初期化実行
-initialize().catch((error) => {
-  console.error("Failed to initialize QuickDrag:", error);
-});
+new QuickDragController().initialize().catch(e => console.error("Failed to initialize QuickDrag:", e));
 
 })();
