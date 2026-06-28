@@ -189,14 +189,16 @@ class SiteRuleEditor {
     this.#renderRules();
   }
 
-  // 保存前に重複パターンを検出してエラー表示する。重複がなければストレージに永続化する
-  // 保存後は空行を除去して再描画し、ボタンを 1.5 秒間無効化して二重送信を防ぐ
+  // 保存前に正規表現の構文エラーと重複パターンを検出してエラー表示する。
+  // 問題がなければストレージに永続化し、ボタンを 1.5 秒間無効化して二重送信を防ぐ
   async #handleSave() {
-    const seen  = new Map();
-    const dupes = new Set();
+    const seen     = new Map();
+    const dupes    = new Set();
+    const invalids = new Set();
     for (let i = 0; i < this.#rules.length; i++) {
       const pattern = (this.#rules[i].regexp ?? this.#rules[i].host ?? "").trim();
       if (!pattern) continue;
+      try { new RegExp(pattern); } catch { invalids.add(i); }
       // 最初の出現行も dupes に追加して、重複の双方をエラーハイライトの対象にする
       if (seen.has(pattern)) { dupes.add(seen.get(pattern)); dupes.add(i); }
       else seen.set(pattern, i);
@@ -204,6 +206,14 @@ class SiteRuleEditor {
 
     for (const input of document.querySelectorAll(".rule-pattern.error")) input.classList.remove("error");
     const errorEl = document.querySelector("#site-rules-error");
+
+    if (invalids.size > 0) {
+      for (const idx of invalids) {
+        document.querySelector(`tr[data-index="${idx}"]`)?.querySelector(".rule-pattern")?.classList.add("error");
+      }
+      if (errorEl) errorEl.textContent = (window._qdT?.rule_invalid_error) || "Invalid regular expression";
+      return;
+    }
 
     if (dupes.size > 0) {
       for (const idx of dupes) {

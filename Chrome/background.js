@@ -7,6 +7,7 @@
 // キャッシュは storage.onChanged で invalidate() が呼ばれるまで保持され、毎回ストレージを読まない。
 class SiteRuleService {
   #cache = null;
+  #regexpCache = new Map();
 
   async getRules() {
     if (this.#cache !== null) return this.#cache;
@@ -30,6 +31,17 @@ class SiteRuleService {
   // undefined（キーが削除された）の場合は null にして次回 getRules() で再ロードさせる
   invalidate(newValue) {
     this.#cache = newValue !== undefined ? newValue : null;
+    this.#regexpCache.clear();
+  }
+
+  // コンパイル済み RegExp をキャッシュして毎回の new RegExp() を省く
+  // 無効なパターンは null を格納し、呼び出しごとの例外発生も防ぐ
+  #getCompiledRegexp(pattern) {
+    if (!this.#regexpCache.has(pattern)) {
+      try { this.#regexpCache.set(pattern, new RegExp(pattern)); }
+      catch { this.#regexpCache.set(pattern, null); }
+    }
+    return this.#regexpCache.get(pattern);
   }
 
   // ルールを先頭から順に評価し、最初にマッチしたルールの status を返す。マッチなしは false
@@ -41,11 +53,10 @@ class SiteRuleService {
         return (rule.status ?? "disable") === "disable";
       }
       if (rule.regexp) {
-        try {
-          if (new RegExp(rule.regexp).test(urlObj.href)) {
-            return (rule.status ?? "disable") === "disable";
-          }
-        } catch { /* invalid regexp */ }
+        const re = this.#getCompiledRegexp(rule.regexp);
+        if (re?.test(urlObj.href)) {
+          return (rule.status ?? "disable") === "disable";
+        }
       }
     }
     return false;
@@ -178,6 +189,7 @@ class IconManager {
     const canvas   = new OffscreenCanvas(size, size);
     const ctx      = canvas.getContext("2d");
     ctx.drawImage(bitmap, 0, 0);
+    bitmap.close();
     const imageData = ctx.getImageData(0, 0, size, size);
     const d = imageData.data;
     for (let i = 0; i < d.length; i += 4) {

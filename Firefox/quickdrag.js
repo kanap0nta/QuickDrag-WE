@@ -104,7 +104,11 @@ class DragClassifier {
       if (img) return this.classifyImageSrc(img.src);
     }
 
-    if (target.href !== undefined) return { kind: DRAG.ADDRESS, url: target.href };
+    if (target.href !== undefined) {
+      // SVGAElement.href は SVGAnimatedString オブジェクトなので baseVal で文字列を取り出す
+      const url = typeof target.href === "string" ? target.href : (target.href.baseVal ?? "");
+      if (url) return { kind: DRAG.ADDRESS, url };
+    }
     return this.classifyText(event.dataTransfer.getData("text/plain"), settings.engineURL);
   }
 }
@@ -149,7 +153,10 @@ class DomActions {
     const bytes = atob(m[2]);
     const arr   = new Uint8Array(bytes.length);
     for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
-    window.open(URL.createObjectURL(new Blob([arr], { type: m[1] })), "_blank");
+    const objectUrl = URL.createObjectURL(new Blob([arr], { type: m[1] }));
+    window.open(objectUrl, "_blank");
+    // 新タブのロードが完了するまでの猶予を設けてから解放する
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
   }
 }
 
@@ -200,7 +207,6 @@ class DropExecutor {
   // ctrlKey → URL エンコード前の元テキストをクリップボードにコピーする
   async #executeSearch(drag, event, settings) {
     const { url } = drag;
-    if (PATTERNS.DATA_URI.test(url)) { DomActions.openDataUri(url); return; }
     if (event.ctrlKey) DomActions.copyToClipboard(event.dataTransfer.getData("text/plain"));
     await this.#send(MESSAGE_TYPE.SEARCH, url, settings.isSearchForeground, settings.newTabPosition);
   }
@@ -227,7 +233,9 @@ class FrameSync {
       try {
         window.top.postMessage(msg, "*");
         // window.top[i] はフレームインデックスによるサブフレームへの参照（Window オブジェクトの配列的アクセス）
-        for (let i = 0; i < window.top.length; i++) window.top[i].postMessage(msg, "*");
+        for (let i = 0; i < window.top.length; i++) {
+          if (window.top[i] !== window) window.top[i].postMessage(msg, "*");
+        }
       } catch { /* cross-origin */ }
     } else {
       for (const tag of ["frame", "iframe"]) {
@@ -238,10 +246,33 @@ class FrameSync {
     }
   }
 
+  // message の送信元が同一ページ内の正当なフレームかを検証する
+  // サブフレームでは top と top の直接子フレーム、トップでは直接子フレームのみを許可する
+  // cross-origin top の場合は window.top[i] アクセスで例外になるため、その場合のみ検証をスキップする
+  #isValidSource(source) {
+    if (!source) return false;
+    if (window !== window.top) {
+      if (source === window.top) return true;
+      try {
+        for (let i = 0; i < window.top.length; i++) {
+          if (window.top[i] === source) return true;
+        }
+      } catch { /* cross-origin top: 検証不可のため許可する */ return true; }
+      return false;
+    }
+    for (const tag of ["frame", "iframe"]) {
+      for (const el of document.getElementsByTagName(tag)) {
+        try { if (el.contentWindow === source) return true; } catch {}
+      }
+    }
+    return false;
+  }
+
   // onDrag コールバックで QuickDragController の #drag を更新することでフレーム間の状態を統一する
   listen(onDrag) {
-    this.#handler = ({ data }) => {
-      if (data?.message_addon === MESSAGE_TYPE.SET_STR && data.drag) onDrag(data.drag);
+    this.#handler = (event) => {
+      const { data, source } = event;
+      if (data?.message_addon === MESSAGE_TYPE.SET_STR && data.drag && this.#isValidSource(source)) onDrag(data.drag);
     };
     window.addEventListener("message", this.#handler);
   }

@@ -135,7 +135,7 @@ class SiteRuleManager {
     const stablePath = pathParts.length > 0 ? "/" + pathParts[0] : "";
     const base       = urlObj.origin + stablePath;
     const escaped    = base.replace(/[.+^${}()|[\]\\]/g, "\\$&");
-    this.#rules.push({ regexp: `^${escaped}(/.*)?(\\?.*)?$`, status: "disable" });
+    this.#rules.push({ regexp: `^${escaped}(/.*)?(\\?.*)?(#.*)?$`, status: "disable" });
   }
 
   // 現在の URL にマッチするルールをすべて削除する（host / regexp どちらの形式も対象）
