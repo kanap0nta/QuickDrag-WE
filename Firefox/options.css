@@ -14,6 +14,7 @@ body {
   gap: 0.5em;
   padding: 0.5em 0;
   cursor: pointer;
+  user-select: none;
 }
 
 .checkbox-row:hover {
@@ -95,7 +96,7 @@ section {
   bottom: 0;
   background-color: #ccc;
   border-radius: 18px;
-  transition: 0.2s;
+  transition: 0.1s;
 }
 
 .toggle-slider:before {
@@ -107,7 +108,7 @@ section {
   bottom: 3px;
   background-color: white;
   border-radius: 50%;
-  transition: 0.2s;
+  transition: 0.1s;
 }
 
 .toggle-switch input:checked + .toggle-slider {
