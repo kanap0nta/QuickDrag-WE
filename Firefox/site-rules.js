@@ -12,6 +12,8 @@ class SiteRuleEditor {
   #currentUrlObj = null;
 
   async initialize() {
+    // storage.local が復旧していれば、フォールバック中に storage.sync へ保存したルールを戻してから読み込む
+    await QDStorage.restoreFromFallback();
     await this.#loadRules();
     await this.#resolveCurrentTab();
     this.#renderRules();
@@ -22,13 +24,13 @@ class SiteRuleEditor {
   // ルールが空の場合は空白行を 1 行追加して UI が空欄にならないようにする
   async #loadRules() {
     try {
-      const data = await browser.storage.local.get([RULES_STORAGE_KEY, "disabledPatterns"]);
+      const data = await QDStorage.get([RULES_STORAGE_KEY, "disabledPatterns"]);
       if (data[RULES_STORAGE_KEY] !== undefined) {
         this.#rules = data[RULES_STORAGE_KEY];
       } else if (data.disabledPatterns?.length > 0) {
         this.#rules = window.qdMigrateOldPatterns(data.disabledPatterns);
-        await browser.storage.local.set({ [RULES_STORAGE_KEY]: this.#rules });
-        await browser.storage.local.remove("disabledPatterns");
+        await QDStorage.set({ [RULES_STORAGE_KEY]: this.#rules });
+        await QDStorage.remove("disabledPatterns");
       } else {
         this.#rules = [];
       }
@@ -44,7 +46,7 @@ class SiteRuleEditor {
   async #saveRules() {
     try {
       const toSave = this.#rules.filter(r => (r.regexp ?? r.host ?? "").trim());
-      await browser.storage.local.set({ [RULES_STORAGE_KEY]: toSave });
+      await QDStorage.set({ [RULES_STORAGE_KEY]: toSave });
     } catch (e) {
       console.error("Failed to save site rules:", e);
     }

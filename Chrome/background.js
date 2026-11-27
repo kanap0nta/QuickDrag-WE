@@ -1,5 +1,8 @@
 "use strict";
 
+// QDStorage（storage.local が壊れたときに storage.sync へフォールバックするラッパー）を読み込む
+importScripts("storage.js");
+
 (() => {
 
 // ===== SiteRuleService =====
@@ -11,7 +14,7 @@ class SiteRuleService {
 
   async getRules() {
     if (this.#cache !== null) return this.#cache;
-    const data = await chrome.storage.local.get(["siteRules", "disabledPatterns"]);
+    const data = await QDStorage.get(["siteRules", "disabledPatterns"]);
     if (data["siteRules"] !== undefined) {
       this.#cache = data["siteRules"];
       return this.#cache;
@@ -19,8 +22,8 @@ class SiteRuleService {
     // 旧形式が残っている場合は移行して新形式で保存する
     if (data.disabledPatterns?.length > 0) {
       this.#cache = this.#migrate(data.disabledPatterns);
-      await chrome.storage.local.set({ "siteRules": this.#cache });
-      await chrome.storage.local.remove("disabledPatterns");
+      await QDStorage.set({ "siteRules": this.#cache });
+      await QDStorage.remove("disabledPatterns");
     } else {
       this.#cache = [];
     }
@@ -271,6 +274,10 @@ class BackgroundController {
   }
 
   initialize() {
+    // storage.local が復旧していれば、フォールバック中に storage.sync へ保存した設定を戻す。
+    // 戻した値は storage.onChanged 経由で各コンテキストに反映されるため、完了は待たない
+    QDStorage.restoreFromFallback();
+
     // return true でリスナーが非同期応答を待機するよう Chrome に伝える
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       this.#msgHandler.handle(request, sender, sendResponse);
@@ -290,8 +297,15 @@ class BackgroundController {
       }
     });
 
+    // 旧バージョンからの更新時に設定を新形式へ移行する。
+    // オプションページを開くまで移行されないと、コンテンツスクリプトが旧設定を無視して初期値で動いてしまう
+    chrome.runtime.onInstalled.addListener(({ reason }) => {
+      if (reason !== "update") return;
+      QDStorage.migrateLegacySettings().catch(e => console.error("Failed to migrate legacy settings:", e));
+    });
+
     chrome.storage.onChanged.addListener(async (changes, area) => {
-      if (area !== "local" || !changes["siteRules"]) return;
+      if (!QDStorage.isActiveArea(area) || !changes["siteRules"]) return;
       this.#ruleService.invalidate(changes["siteRules"].newValue);
       await this.#iconManager.updateAll();
     });

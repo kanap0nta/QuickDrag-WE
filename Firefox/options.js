@@ -19,7 +19,7 @@ const elements = {
 
 async function saveSettings(settings) {
   try {
-    await browser.storage.local.set(settings);
+    await QDStorage.set(settings);
   } catch (e) {
     console.error("Failed to save settings:", e);
   }
@@ -27,7 +27,7 @@ async function saveSettings(settings) {
 
 async function loadSettings() {
   try {
-    return await browser.storage.local.get(STORAGE_KEYS);
+    return await QDStorage.get(STORAGE_KEYS);
   } catch (e) {
     console.error("Failed to load settings:", e);
     return {};
@@ -83,15 +83,15 @@ class SiteRuleManager {
   // 旧形式（disabledPatterns）が残っていれば新形式に移行してから読み込む
   async load() {
     try {
-      const data = await browser.storage.local.get([RULES_STORAGE_KEY, "disabledPatterns"]);
+      const data = await QDStorage.get([RULES_STORAGE_KEY, "disabledPatterns"]);
       if (data[RULES_STORAGE_KEY] !== undefined) {
         this.#rules = data[RULES_STORAGE_KEY];
         return;
       }
       if (data.disabledPatterns?.length > 0) {
         this.#rules = window.qdMigrateOldPatterns(data.disabledPatterns);
-        await browser.storage.local.set({ [RULES_STORAGE_KEY]: this.#rules });
-        await browser.storage.local.remove("disabledPatterns");
+        await QDStorage.set({ [RULES_STORAGE_KEY]: this.#rules });
+        await QDStorage.remove("disabledPatterns");
         return;
       }
       this.#rules = [];
@@ -104,7 +104,7 @@ class SiteRuleManager {
   async save() {
     try {
       const toSave = this.#rules.filter(r => (r.regexp ?? "").trim() || (r.host ?? "").trim());
-      await browser.storage.local.set({ [RULES_STORAGE_KEY]: toSave });
+      await QDStorage.set({ [RULES_STORAGE_KEY]: toSave });
     } catch (e) {
       console.error("Failed to save site rules:", e);
     }
@@ -155,24 +155,6 @@ class SiteRuleManager {
   }
 }
 
-// ===== Migration =====
-// 旧バージョンの checkboxArray 形式を現在の個別キー形式に移行する
-async function migrateToggleArray() {
-  const data = await browser.storage.local.get("checkboxArray");
-  const arr  = data.checkboxArray;
-  if (!Array.isArray(arr)) return;
-  // typo（forground）を修正済みキーに対応させる
-  const RENAMED = { is_address_forground: "is_address_foreground", is_search_forground: "is_search_foreground" };
-  const normalized = arr.map(k => RENAMED[k] ?? k);
-  await browser.storage.local.set({
-    isAddressForeground: normalized.includes("is_address_foreground"),
-    isSearchForeground:  normalized.includes("is_search_foreground"),
-    isSaveImage:         normalized.includes("is_save_image"),
-    isPreferSaveImage:   normalized.includes("is_prefer_save_image"),
-  });
-  await browser.storage.local.remove("checkboxArray");
-}
-
 // ===== OptionsController =====
 // オプションページ全体を調停するコントローラ。
 // SiteRuleManager を所有し、現在タブの URL と照合してサイトセクションの表示を制御する。
@@ -181,9 +163,16 @@ class OptionsController {
   #currentUrlObj = null;
 
   async initialize() {
+    // storage.local が復旧していれば、フォールバック中に storage.sync へ保存した設定を戻してから読み込む
+    await QDStorage.restoreFromFallback();
     await this.#ruleManager.load();
     await this.#resolveCurrentTab();
-    await migrateToggleArray();
+    // 移行に失敗しても後続の初期化は続ける（ここで例外を投げるとイベントリスナーが登録されず、設定変更が一切保存されなくなる）
+    try {
+      await QDStorage.migrateLegacySettings();
+    } catch (e) {
+      console.error("Failed to migrate legacy settings:", e);
+    }
     updateUI(await loadSettings());
     this.#setupEventListeners();
   }
@@ -224,7 +213,7 @@ class OptionsController {
 
     // 別タブや site-rules ページからルールが変更されたとき、現在タブの表示を同期する
     browser.storage.onChanged.addListener((changes, area) => {
-      if (area !== "local" || !changes[RULES_STORAGE_KEY]) return;
+      if (!QDStorage.isActiveArea(area) || !changes[RULES_STORAGE_KEY]) return;
       this.#ruleManager.sync(changes[RULES_STORAGE_KEY].newValue);
       if (this.#currentUrlObj) {
         const disabled = this.#ruleManager.isDisabled(this.#currentUrlObj);

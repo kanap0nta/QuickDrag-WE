@@ -17,6 +17,7 @@ Firefox/         Firefox 向けビルド
 | --- | --- |
 | `manifest.json` | 拡張機能メタデータ・パーミッション定義 |
 | `constants.js` | 定数（DRAG 種別・MESSAGE_TYPE・PATTERNS・TLD リスト）。コンテンツスクリプトより先に読み込まれる |
+| `storage.js` | `QDStorage`（`storage.local` ラッパー）。全コンテキスト（ページ・コンテンツスクリプト・バックグラウンド）で共有 |
 | `quickdrag.js` | コンテンツスクリプト本体 |
 | `background.js` | Service Worker |
 | `options.html/js/css` | ポップアップ兼オプションページ |
@@ -67,6 +68,17 @@ Firefox/         Firefox 向けビルド
 - `searchURL` — 新規タブを開く
 - `downloadImage` — ファイルダウンロード
 
+### storage.js（QDStorage）
+
+`storage.local` の読み書きは必ず `QDStorage.get/set/remove` を経由する（直接 `storage.local` を呼ばない）。
+
+- Firefox は `storage.local` を IndexedDB に保存しており、DB が壊れると get / set / remove がすべて失敗し続ける（Firefox 153 以前は `clear()` でも復旧しない）。その場合だけ `storage.sync` にフォールバックする。正常時は `storage.sync` に書き込まない（復旧確認のための読み込みのみ）
+- フォールバックで `storage.sync` に書くときは `qdFallbackOwner`（インストール固有の拡張機能 URL）も保存する
+- `restoreFromFallback()` は `storage.local` が復旧していれば、`qdFallbackOwner` が自分のインストールと一致する `storage.sync` の値を `storage.local` に戻して sync から削除する。オプションページ・サイトルールページの初期化時とバックグラウンド起動時に呼ぶ（コンテンツスクリプトでは呼ばない）
+- `storage.onChanged` の area 判定は `QDStorage.isActiveArea(area)` を使う（フォールバック中のみ `"sync"` も対象）
+- `migrateLegacySettings()` は旧 `checkboxArray` 形式を個別キーに移行する（新形式のキーが既にあれば旧形式を削除するだけ）。オプションページ初期化時とバックグラウンドの `runtime.onInstalled`（reason: update）で呼ぶ
+- `globalThis.QDStorage` に公開している（Firefox のバックグラウンドは module のためトップレベル宣言が共有されない）
+
 ### ストレージキー（`chrome.storage.local`）
 
 | キー | 型 | 内容 |
@@ -86,7 +98,7 @@ Firefox/         Firefox 向けビルド
 
 | 項目 | Chrome | Firefox |
 | --- | --- | --- |
-| バックグラウンド定義 | `"service_worker": "background.js"` | `"scripts": ["background.js"], "type": "module"` |
+| バックグラウンド定義 | `"service_worker": "background.js"`（`storage.js` は `background.js` 先頭の `importScripts()` で読み込む） | `"scripts": ["storage.js", "background.js"], "type": "module"` |
 | アイコンサイズ | 48 / 96 / 128 px | 48 / 96 px のみ |
 | 追加パーミッション | なし | `"cookies"`（コンテナタブ取得に必要） |
 | 固有フィールド | なし | `browser_specific_settings`（gecko ID・`strict_min_version`・`data_collection_permissions`） |
@@ -118,5 +130,6 @@ Firefox/         Firefox 向けビルド
 - Chrome/Firefox で**コードを変更したら両ディレクトリに同じ変更を適用**する（共通化機構は存在しない）
 - Manifest V3 のため Service Worker は非アクティブになりうる。`sendMessage` 失敗は正常ケースとして扱う
 - `constants.js` は `quickdrag.js` より先にロードされるため、コンテンツスクリプトからは定数をグローバルとして参照できる
+- `storage.js` はコンテンツスクリプト（`constants.js` の次）・`options.html`・`site-rules.html`・バックグラウンドで `QDStorage` を使うスクリプトより先に読み込む
 - `DOMAIN_PATTERN` は IANA TLD リスト全体を正規表現に含むため非常に長い。直接編集しないこと
 - サイトルール旧形式（`disabledPatterns` 配列）は `background.js` の `SiteRuleService#migrate()` で自動変換される
