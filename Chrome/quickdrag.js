@@ -3,7 +3,7 @@
 (() => {
 
 // ===== SettingsManager =====
-// chrome.storage.local の値を内部キー名に変換して保持する。
+// storage の値（QDStorage 経由で読む）を内部キー名に変換して保持する。
 // ストレージの変更通知（{newValue} 形式）と初期ロード（値そのまま）の両方を update() で受け入れる。
 class SettingsManager {
   #settings = {
@@ -29,7 +29,7 @@ class SettingsManager {
   // 非アクティブ期間中にストレージが変更されていた場合に備え、activate() から毎回呼ばれる
   async load() {
     try {
-      this.update(await chrome.storage.local.get(["searchEngineURL", "tabPosition", ...TOGGLE_KEYS]));
+      this.update(await QDStorage.get(["searchEngineURL", "tabPosition", ...TOGGLE_KEYS]));
     } catch (e) {
       console.error("Failed to load settings:", e);
     }
@@ -428,7 +428,7 @@ class QuickDragController {
     // サイトルール変更は非アクティブ時でも即座に有効 / 無効を再評価する
     // その他の設定変更はアクティブ時のみ反映する（非アクティブ時は activate() 時に再ロードされる）
     chrome.storage.onChanged.addListener(async (changes, area) => {
-      if (area !== "local") return;
+      if (!QDStorage.isActiveArea(area)) return;
       if (RULES_STORAGE_KEY in changes) { await this.#handleNavigation(); return; }
       if (!this.#isActive) return;
       // storage.onChanged の {key: {oldValue, newValue}} 形式を update() 向けの {key: value} 形式に変換する

@@ -11,7 +11,7 @@ class SiteRuleService {
 
   async getRules() {
     if (this.#cache !== null) return this.#cache;
-    const data = await browser.storage.local.get(["siteRules", "disabledPatterns"]);
+    const data = await QDStorage.get(["siteRules", "disabledPatterns"]);
     if (data["siteRules"] !== undefined) {
       this.#cache = data["siteRules"];
       return this.#cache;
@@ -19,8 +19,8 @@ class SiteRuleService {
     // 旧形式が残っている場合は移行して新形式で保存する
     if (data.disabledPatterns?.length > 0) {
       this.#cache = this.#migrate(data.disabledPatterns);
-      await browser.storage.local.set({ "siteRules": this.#cache });
-      await browser.storage.local.remove("disabledPatterns");
+      await QDStorage.set({ "siteRules": this.#cache });
+      await QDStorage.remove("disabledPatterns");
     } else {
       this.#cache = [];
     }
@@ -269,6 +269,10 @@ class BackgroundController {
   }
 
   initialize() {
+    // storage.local が復旧していれば、フォールバック中に storage.sync へ保存した設定を戻す。
+    // 戻した値は storage.onChanged 経由で各コンテキストに反映されるため、完了は待たない
+    QDStorage.restoreFromFallback();
+
     // Firefox の browser.runtime.onMessage は Promise を返すと非同期応答になる（Chrome の return true とは異なる）
     browser.runtime.onMessage.addListener((request, sender) => {
       return this.#msgHandler.handle(request, sender);
@@ -287,8 +291,15 @@ class BackgroundController {
       }
     });
 
+    // 旧バージョンからの更新時に設定を新形式へ移行する。
+    // オプションページを開くまで移行されないと、コンテンツスクリプトが旧設定を無視して初期値で動いてしまう
+    browser.runtime.onInstalled.addListener(({ reason }) => {
+      if (reason !== "update") return;
+      QDStorage.migrateLegacySettings().catch(e => console.error("Failed to migrate legacy settings:", e));
+    });
+
     browser.storage.onChanged.addListener(async (changes, area) => {
-      if (area !== "local" || !changes["siteRules"]) return;
+      if (!QDStorage.isActiveArea(area) || !changes["siteRules"]) return;
       this.#ruleService.invalidate(changes["siteRules"].newValue);
       await this.#iconManager.updateAll();
     });
