@@ -68,3 +68,7 @@ $RECYCLE.BIN/
 *.bak
 
 # End of https://www.gitignore.io/api/linux,macos,windows
+
+### build.bat output ###
+/Chrome.zip
+/Firefox.zip
